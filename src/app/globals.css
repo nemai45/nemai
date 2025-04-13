@@ -1,26 +1,135 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@config "../../tailwind.config.ts";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+body {
+  font-family: Arial, Helvetica, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  :root {
+    --background: 280 20% 97%;
+    --foreground: 280 10% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 280 10% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 280 10% 20%;
+
+    --primary: 282 62% 67%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 197 71% 80%;
+    --secondary-foreground: 280 10% 20%;
+
+    --muted: 280 10% 95%;
+    --muted-foreground: 280 5% 50%;
+
+    --accent: 332 40% 85%;
+    --accent-foreground: 280 10% 20%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 280 10% 90%;
+    --input: 280 10% 90%;
+    --ring: 282 62% 67%;
+
+    --radius: 1rem;
+
+    --sidebar-background: 280 20% 98%;
+    --sidebar-foreground: 280 10% 30%;
+    --sidebar-primary: 282 62% 67%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 332 40% 95%;
+    --sidebar-accent-foreground: 280 10% 20%;
+    --sidebar-border: 280 10% 90%;
+    --sidebar-ring: 282 62% 67%;
+  }
+
+  .dark {
+    --background: 280 15% 10%;
+    --foreground: 280 10% 95%;
+
+    --card: 280 15% 15%;
+    --card-foreground: 280 10% 95%;
+
+    --popover: 280 15% 15%;
+    --popover-foreground: 280 10% 95%;
+
+    --primary: 282 62% 67%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 197 71% 50%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 280 15% 20%;
+    --muted-foreground: 280 10% 70%;
+
+    --accent: 332 40% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 280 15% 25%;
+    --input: 280 15% 25%;
+    --ring: 282 62% 67%;
+
+    --sidebar-background: 280 15% 12%;
+    --sidebar-foreground: 280 10% 90%;
+    --sidebar-primary: 282 62% 67%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 280 15% 20%;
+    --sidebar-accent-foreground: 280 10% 95%;
+    --sidebar-border: 280 15% 25%;
+    --sidebar-ring: 282 62% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
+  }
+}
+
+@layer components {
+  .unicorn-card {
+    @apply relative overflow-hidden rounded-xl bg-gradient-to-br from-unicorn-purple/20 via-unicorn-pink/20 to-unicorn-blue/20 
+           backdrop-blur-sm border border-white/20 shadow-lg transition-all duration-300 
+           hover:shadow-xl hover:border-white/40;
+  }
+
+  .unicorn-glow {
+    @apply relative before:absolute before:inset-0 before:-z-10 before:rounded-xl 
+           before:bg-gradient-to-r before:from-unicorn-purple before:via-unicorn-pink before:to-unicorn-blue before:opacity-70 
+           before:blur-xl before:transition-opacity before:duration-500 hover:before:opacity-90;
+  }
+
+  .unicorn-button {
+    @apply px-6 py-3 rounded-full bg-gradient-to-r from-unicorn-purple to-unicorn-pink text-white font-medium
+           shadow-md hover:shadow-lg transition-all duration-300 hover:translate-y-[-2px] active:translate-y-[0px]
+           focus:outline-none focus:ring-2 focus:ring-unicorn-purple;
+  }
+
+  .unicorn-input {
+    @apply rounded-xl border border-unicorn-purple/30 bg-white/80 px-4 py-2 focus:outline-none
+           focus:border-unicorn-purple focus:ring-2 focus:ring-unicorn-purple/30;
+  }
+
+  .shimmer-effect {
+    @apply bg-gradient-to-r from-transparent via-white/20 to-transparent bg-[length:200%_100%] animate-shimmer;
+  }
 }
