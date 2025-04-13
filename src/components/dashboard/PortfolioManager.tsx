@@ -1,11 +1,10 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Plus, X } from "lucide-react"
-import Image from "next/image"
+import type React from "react"
+import { useState } from "react"
 // Sample portfolio images
 const PORTFOLIO_IMAGES = [
   {
@@ -111,7 +110,7 @@ const PortfolioManager = () => {
         ))}
 
         <Card className="border border-dashed border-muted-foreground/50 aspect-square flex flex-col items-center justify-center p-6 text-muted-foreground hover:bg-muted/50 transition-colors cursor-pointer">
-          <Image alt="" className="w-10 h-10 mb-2" />
+          {/* <Image alt="" className="w-10 h-10 mb-2" /> */}
           <p className="text-center">Drop your image here or click to upload</p>
         </Card>
       </div>

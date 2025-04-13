@@ -61,12 +61,14 @@ const SERVICES = {
   ],
 }
 
+
+
 const BookAppointment = () => {
   const { toast } = useToast()
 
   const [artists] = useState(ARTISTS)
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null)
-  const [services, setServices] = useState<any[]>([])
+  const [services, setServices] = useState<typeof SERVICES[1]>([])
   const [selectedService, setSelectedService] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([])
@@ -91,8 +93,6 @@ const BookAppointment = () => {
     if (selectedDate && selectedService) {
       // Generate mock time slots
       const slots = []
-      const service = services.find((s) => s.id === selectedService)
-      const duration = service?.duration || 60
 
       // Create time slots at 30-minute intervals from 9 AM to 5 PM
       for (let hour = 9; hour < 17; hour++) {
@@ -238,7 +238,7 @@ const BookAppointment = () => {
                             >
                               <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="artist_location" id="artist_location" />
-                                <Label htmlFor="artist_location">Artist's Location</Label>
+                                <Label htmlFor="artist_location">Artists&apos;Location</Label>
                               </div>
                               <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="customer_location" id="customer_location" />

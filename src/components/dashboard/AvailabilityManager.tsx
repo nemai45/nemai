@@ -1,15 +1,15 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useToast } from "@/hooks/use-toast"
-import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
-import { Clock, X, Plus } from "lucide-react"
+import { Clock, Plus, X } from "lucide-react"
+import { useState } from "react"
 
 // Mock data
 const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
@@ -114,15 +114,24 @@ const AvailabilityManager = () => {
         return
       }
     }
-
-    const newBlockedDate = {
-      id: `new-${Date.now()}`,
-      blocked_date: formattedDate,
-      reason: blockReason,
-      start_time: blockTimeSlot ? blockStartTime : null,
-      end_time: blockTimeSlot ? blockEndTime : null,
+    let newBlockedDate;
+    if(!blockTimeSlot) {
+      newBlockedDate = {
+        id: `blocked-${Date.now()}`,
+        blocked_date: formattedDate,
+        reason: blockReason,
+        start_time: null,
+        end_time: null,
+      }
+    }else{
+      newBlockedDate = {
+        id: `blocked-${Date.now()}`,
+        blocked_date: formattedDate,
+        reason: blockReason,
+        start_time: blockStartTime,
+        end_time: blockEndTime,
+      }
     }
-
     setBlockedDates([...blockedDates, newBlockedDate])
     setSelectedDate(undefined)
     setBlockReason("")

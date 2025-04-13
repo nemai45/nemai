@@ -66,7 +66,7 @@ const Testimonials = () => {
                     ))}
                   </div>
                 </div>
-                <p className="text-foreground italic">"{testimonial.content}"</p>
+                <p className="text-foreground italic">{testimonial.content}</p>
               </CardContent>
             </Card>
           ))}

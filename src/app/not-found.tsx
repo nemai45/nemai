@@ -12,7 +12,7 @@ export default function NotFound() {
         </h1>
         <p className="text-xl text-foreground mb-6">Oops! This page seems to have vanished like magic</p>
         <p className="text-muted-foreground mb-8">
-          The page you're looking for doesn't exist or has been moved to another nail dimension.
+          The page you&apos;re looking for doesn&apos;t exist or has been moved to another nail dimension.
         </p>
         <Link href="/">
           <Button className="unicorn-button">Return to Home</Button>
