@@ -1,6 +1,6 @@
 import AvailabilityManager from '@/components/dashboard/AvailabilityManager'
-import { Availability, BlockedDate } from '@/lib/type';
-import { getAvailability, getBlockedDates, getMaxClients } from '@/lib/user'
+import { Availability, BlockedDate, Booking } from '@/lib/type';
+import { getArtistBookings, getAvailability, getBlockedDates, getBookings, getMaxClients } from '@/lib/user'
 import React from 'react'
 
 const page = async () => {
@@ -28,6 +28,13 @@ const page = async () => {
     return <div>No max clients found</div>;
   }
 
+  const { data: bookingsData, error: bookingsError } = await getArtistBookings();
+  if (bookingsError) {
+    return <div>{bookingsError}</div>;
+  }
+  if (!bookingsData) {
+    return <div>No bookings found</div>;
+  }
   const availability: Availability[] = data.map((item) => ({
     id: item.id,
     startTime: minutesToTime(item.start_time),
@@ -48,8 +55,19 @@ const page = async () => {
     start_time: minutesToTime(item.start_time),
     end_time: minutesToTime(item.end_time),
   }))
+  const bookings: {
+    service_id: string,
+    start_time: number,
+    date: string,
+    duration: number,
+  }[] = bookingsData.map((item) => ({
+    service_id: item.service.id,
+    start_time: item.start_time,
+    date: item.date,
+    duration: item.service.duration,
+  }))
   return (
-    <AvailabilityManager blockedDates={blockedDates} availability={availability} maxClients={maxClients} />
+    <AvailabilityManager bookings={bookings} blockedDates={blockedDates} availability={availability} maxClients={maxClients} />
   )
 }
 

@@ -6,7 +6,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { type BlockedDate } from "@/lib/type"
+import { Booking, type BlockedDate } from "@/lib/type"
 import { Availability } from "@/lib/type"
 import { format } from "date-fns"
 import { Clock, Plus, X } from "lucide-react"
@@ -24,12 +24,26 @@ interface AvailabilityManagerProps {
   availability: Availability[]
   maxClients: number
   blockedDates: BlockedDate[]
+  bookings: {
+    service_id: string,
+    start_time: number,
+    date: string,
+    duration: number,
+  }[]
 }
+
+
+function timeToMinutes(time: string) {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
 
 const AvailabilityManager = ({
   availability,
   maxClients,
-  blockedDates: initialBlockedDates
+  blockedDates: initialBlockedDates,
+  bookings
 }: AvailabilityManagerProps) => {
   const [weeklyAvailability, setWeeklyAvailability] = useState<Availability[]>(availability)
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>(initialBlockedDates)
@@ -126,7 +140,7 @@ const AvailabilityManager = ({
   const availableTimeSlots = useMemo(() => {
     return getAvailableTimeSlots();
   }, [weeklyAvailability, selectedDate]);
-  
+
   const getBlockStartTimeOptions = useMemo(() => {
     if (availableTimeSlots.length === 0) return [];
 
@@ -142,15 +156,36 @@ const AvailabilityManager = ({
         date.blocked_date === formattedDate
       );
 
-      return allTimeOptions.filter(time => {
-        return !blockedTimesForDay.some(blockedDate =>
-          blockedDate.start_time && blockedDate.end_time &&
-          time >= blockedDate.start_time && time < blockedDate.end_time
-        );
-      });
+      const bookingsForDay = bookings.filter(booking =>
+        booking.date === formattedDate
+      )
+
+      const timeOptions = allTimeOptions.map(time => {
+        const startTime = time
+        const artistUsed = blockedTimesForDay.reduce((acc, date) => {
+          if (startTime >= date.start_time && startTime < date.end_time) {
+            return acc + date.no_of_artists
+          }
+          return acc
+        }, 0)
+
+        const bookedArtists = bookingsForDay.reduce((acc, booking) => {
+          if (timeToMinutes(time) >= booking.start_time && timeToMinutes(time) < booking.start_time + booking.duration) {
+            return acc + 1
+          }
+          return acc
+        }, 0)
+        return {
+          time,
+          count: maxClients - artistUsed - bookedArtists
+        }
+      })
+
+      const finalTimeOptions = timeOptions.filter(option => option.count > 0)
+      return finalTimeOptions.map(option => option.time)
     }
     return allTimeOptions;
-  }, [availableTimeSlots, selectedDate, blockedDates]);
+  }, [availableTimeSlots, selectedDate, blockedDates, bookings]);
 
   const getBlockEndTimeOptions = useMemo(() => {
     if (!blockedTimeSlot.startTime || availableTimeSlots.length === 0 || !selectedDate) return [];
@@ -165,7 +200,7 @@ const AvailabilityManager = ({
     const latestEnd = relevantSlots.reduce((latest, slot) =>
       slot.endTime > latest ? slot.endTime : latest
       , "00:00");
-    
+
     const formattedDate = format(selectedDate, "yyyy-MM-dd");
 
     const blockedTimesForDay = blockedDates.filter(date =>
@@ -174,7 +209,7 @@ const AvailabilityManager = ({
 
     const earliestBlockedStartTime = blockedTimesForDay.reduce((earliest, slot) =>
       slot.start_time < earliest ? slot.start_time : earliest
-    , "23:59");
+      , "23:59");
 
     const latestEndTime = latestEnd < earliestBlockedStartTime ? latestEnd : earliestBlockedStartTime
 

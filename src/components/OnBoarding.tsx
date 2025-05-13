@@ -4,14 +4,18 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useUser } from '@/hooks/use-user'
 import { PersonalInfo, ProfessionalInfo } from '@/lib/type'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { FC, useEffect, useState } from 'react'
 import ProfileCard from './ProfileCard'
 
-const OnBoarding = () => {
+interface OnBoardingProps {
+  email: string;
+}
+
+const OnBoarding:FC<OnBoardingProps> = ({ email }) => {
   const router = useRouter()
-  const { user, role, error, loading } = useUser()
+
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
-    email: user?.email || '',
+    email: email,
     first_name: '',
     last_name: '',
     phone_no: ''
@@ -26,37 +30,6 @@ const OnBoarding = () => {
     booking_month_limit: 0,
     location: null
   })
-
-  useEffect(() => {
-    if (user) {
-      setPersonalInfo((prev) => ({
-        ...prev,
-        email: user.email || ''
-      }))
-    }
-  }, [user?.email, user])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center w-full h-full p-4">
-        <Card className='w-full max-w-2xl'>
-          <CardContent className='flex items-center justify-center'>
-            <p className='text-lg font-semibold'>Loading...</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (!user) {
-    router.push('/login')
-    return null
-  }
-  if (error) {
-    console.error(error)
-    router.push('/login')
-    return null
-  }
 
   return (
     <div className="flex items-center justify-center w-full h-full p-4">

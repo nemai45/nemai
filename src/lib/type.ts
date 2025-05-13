@@ -141,6 +141,7 @@ export const slotDataSchema = z.object({
     id: z.string(),
     start_time: z.number(),
     date: z.string(),
+    duration: z.number(),
   })),
 })
 

@@ -111,7 +111,7 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
     const finalTimeOptions = timeOptions.filter(option => {
       const conflictSlots = bookedSlots.filter(slot => {
         const slotStartTime = slot.start_time
-        const slotEndTime = slotStartTime + bookedService.service.duration
+        const slotEndTime = slotStartTime + slot.duration
         const serviceStartTime = timeToMinutes(option.time)
         const serviceEndTime = serviceStartTime + serviceDuration
         return slotStartTime < serviceEndTime && slotEndTime > serviceStartTime
