@@ -15,7 +15,7 @@ const Header = async () => {
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-4">
             <Image src="/logo.png" alt="Logo" width={40} height={40} className="h-14 w-14" />
-            <span className="font-bold text-[#66402B] text-3xl ">NéMai</span>
+            <span className="font-bold hidden md:block text-[#66402B] text-3xl ">NéMai</span>
           </Link>
         </div>
 
@@ -48,7 +48,7 @@ const Header = async () => {
           ) : (
             <>
               <Button variant="outline" size="sm" asChild>
-                <Link href="/auth">Sign in</Link>
+                <Link href="/login">Sign in</Link>
               </Button>
             </>
           )}

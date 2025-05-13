@@ -35,12 +35,6 @@ const HeroSection = () => {
               <Link href="/auth" className="unicorn-button inline-flex items-center justify-center">
                 Book a Nail Artist
               </Link>
-              <Link
-                href="/auth"
-                className="unicorn-secondary-button"
-              >
-                Join as an Artist
-              </Link>
             </div>
 
             <div className="relative mt-6 max-w-md">
