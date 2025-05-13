@@ -1,47 +1,8 @@
-import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Star, MapPin, Calendar } from "lucide-react"
-
-// Sample data for featured artists
-const FEATURED_ARTISTS = [
-  {
-    id: 1,
-    name: "Sparkle Unicorn Nails",
-    rating: 4.9,
-    reviews: 124,
-    location: "Downtown",
-    image: "https://images.unsplash.com/photo-1604902396830-aca29e19b067?auto=format&fit=crop&q=80&w=400&h=400",
-    profileImage: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=100&h=100",
-  },
-  {
-    id: 2,
-    name: "Magical Manicures",
-    rating: 4.8,
-    reviews: 98,
-    location: "East Village",
-    image: "https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&q=80&w=400&h=400",
-    profileImage: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=100&h=100",
-  },
-  {
-    id: 3,
-    name: "Rainbow Tips",
-    rating: 4.7,
-    reviews: 87,
-    location: "West Side",
-    image: "https://images.unsplash.com/photo-1610992015779-46217a252221?auto=format&fit=crop&q=80&w=400&h=400",
-    profileImage: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&q=80&w=100&h=100",
-  },
-  {
-    id: 4,
-    name: "Glamour Claws",
-    rating: 4.9,
-    reviews: 156,
-    location: "North Hills",
-    image: "https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?auto=format&fit=crop&q=80&w=400&h=400",
-    profileImage: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100&h=100",
-  },
-]
+import Link from "next/link"
+import { featuredArtists } from "@/lib/mock-data"
 
 const FeaturedArtists = () => {
   return (
@@ -55,7 +16,7 @@ const FeaturedArtists = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {FEATURED_ARTISTS.map((artist) => (
+          {featuredArtists.map((artist) => (
             <Card
               key={artist.id}
               className="unicorn-card overflow-hidden group hover:scale-[1.02] transition-transform duration-300"
@@ -68,7 +29,7 @@ const FeaturedArtists = () => {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <div className="absolute bottom-4 left-4 right-4">
-                    <Link href="/auth">
+                    <Link href={`/artist-profile/${artist.id}`}>
                       <Button className="w-full unicorn-button">Book Now</Button>
                     </Link>
                   </div>
@@ -105,7 +66,7 @@ const FeaturedArtists = () => {
         </div>
 
         <div className="mt-12 text-center">
-          <Link href="/auth">
+          <Link href="/browse">
             <Button className="unicorn-button inline-flex items-center">View All Nail Artists</Button>
           </Link>
         </div>

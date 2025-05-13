@@ -1,13 +1,14 @@
-"use client"
-
 import { Button } from "@/components/ui/button"
-import { useAuth } from "@/hooks/use-auth"
+import { getUserRole } from "@/lib/get-user-role"
+import { createClient } from "@/utils/supabase/server"
 import Image from "next/image"
 import Link from "next/link"
+import SignoutButton from "../SignoutButton"
 
-const Header = () => {
-  const { user, userType, profile, signOut } = useAuth()
-
+const Header = async () => {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser();
+  const role = await getUserRole()
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
@@ -37,22 +38,17 @@ const Header = () => {
           {user ? (
             <>
               <div className="mr-2 hidden sm:block">
-                <span className="text-sm text-muted-foreground">Hi, {profile?.first_name || "there"}!</span>
+                <span className="text-sm text-muted-foreground">Hi, {user.email || "there"}!</span>
               </div>
               <Button variant="outline" size="sm" asChild>
-                <Link href={userType === "artist" ? "/artist-dashboard" : "/customer-dashboard"}>Dashboard</Link>
+                <Link href={role === "artist" ? "/artist-dashboard" : (role === "admin" ? '/admin' : '/customer-dashboard')}>Dashboard</Link>
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => signOut()}>
-                Sign out
-              </Button>
+              <SignoutButton />
             </>
           ) : (
             <>
               <Button variant="outline" size="sm" asChild>
                 <Link href="/auth">Sign in</Link>
-              </Button>
-              <Button size="sm" asChild>
-                <Link href="/auth">Get Started</Link>
               </Button>
             </>
           )}

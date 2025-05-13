@@ -63,8 +63,8 @@ const config = {
           ring: "hsl(var(--sidebar-ring))",
         },
         unicorn: {
-          pink: "#F8B7CD",
-          purple: "#C1A7E2",
+          pink: "#F472B6",
+          purple: "#9F7AEA",
           blue: "#A7D8F0",
           mint: "#AEECCD",
           yellow: "#F8E3A3",

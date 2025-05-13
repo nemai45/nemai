@@ -1,121 +1,309 @@
 "use client"
+import { addAlbumImage, addCoverImage, createAlbum } from "@/action/user";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useUser } from "@/hooks/use-user";
+import { type PortfolioItem } from "@/lib/mock-data";
+import { Album, albumSchema, AlbumWithImageCount } from "@/lib/type";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ImageIcon, ImagePlus, Plus, Trash } from "lucide-react";
+import { useRouter } from "next/navigation";
+import type React from "react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import AlbumGrid from "../AlbumGrid";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
 
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Plus, X } from "lucide-react"
-import type React from "react"
-import { useState } from "react"
-// Sample portfolio images
-const PORTFOLIO_IMAGES = [
-  {
-    id: 1,
-    url: "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&q=80&w=400&h=400",
-    caption: "Pink Glitter Gel",
-  },
-  {
-    id: 2,
-    url: "https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&q=80&w=400&h=400",
-    caption: "Minimalist French Tips",
-  },
-  {
-    id: 3,
-    url: "https://images.unsplash.com/photo-1610992015779-46217a252221?auto=format&fit=crop&q=80&w=400&h=400",
-    caption: "Holiday Special",
-  },
-  {
-    id: 4,
-    url: "https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?auto=format&fit=crop&q=80&w=400&h=400",
-    caption: "Rainbow Accent",
-  },
-  {
-    id: 5,
-    url: "https://images.unsplash.com/photo-1604902396830-aca29e19b067?auto=format&fit=crop&q=80&w=400&h=400",
-    caption: "Marble Effect",
-  },
-]
-
-const PortfolioManager = () => {
-  const [images, setImages] = useState(PORTFOLIO_IMAGES)
-  const [draggedItem, setDraggedItem] = useState<number | null>(null)
-
-  const handleDragStart = (e: React.DragEvent, id: number) => {
-    setDraggedItem(id)
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-  }
-
-  const handleDrop = (e: React.DragEvent, dropId: number) => {
-    e.preventDefault()
-    if (draggedItem === null) return
-
-    const draggedIndex = images.findIndex((item) => item.id === draggedItem)
-    const dropIndex = images.findIndex((item) => item.id === dropId)
-
-    if (draggedIndex === dropIndex) return
-
-    const newImages = [...images]
-    const draggedImage = newImages[draggedIndex]
-    newImages.splice(draggedIndex, 1)
-    newImages.splice(dropIndex, 0, draggedImage)
-
-    setImages(newImages)
-    setDraggedItem(null)
-  }
-
-  const handleDelete = (id: number) => {
-    setImages(images.filter((image) => image.id !== id))
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Your Nail Art Gallery</h3>
-        <Button className="unicorn-button">
-          <Plus className="w-4 h-4 mr-2" /> Add New Photo
-        </Button>
-      </div>
-
-      <p className="text-muted-foreground">
-        Drag and drop to rearrange your portfolio. Your first images are shown to customers first.
-      </p>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {images.map((image) => (
-          <Card
-            key={image.id}
-            className="relative border border-border overflow-hidden cursor-move unicorn-card"
-            draggable
-            onDragStart={(e) => handleDragStart(e, image.id)}
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, image.id)}
-          >
-            <div className="aspect-square relative">
-              <img src={image.url || "/placeholder.svg"} alt={image.caption} className="object-cover w-full h-full" />
-              <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-4">
-                <Button size="icon" variant="destructive" className="self-end" onClick={() => handleDelete(image.id)}>
-                  <X className="w-4 h-4" />
-                </Button>
-                <input
-                  type="text"
-                  value={image.caption}
-                  className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-md p-2 text-white w-full"
-                  onChange={() => {}}
-                  placeholder="Add a caption"
-                />
-              </div>
-            </div>
-          </Card>
-        ))}
-
-        <Card className="border border-dashed border-muted-foreground/50 aspect-square flex flex-col items-center justify-center p-6 text-muted-foreground hover:bg-muted/50 transition-colors cursor-pointer">
-          {/* <Image alt="" className="w-10 h-10 mb-2" /> */}
-          <p className="text-center">Drop your image here or click to upload</p>
-        </Card>
-      </div>
-    </div>
-  )
+interface PortfolioManagerProps {
+  albums: AlbumWithImageCount[];
+  coverImageCount: number;
 }
 
-export default PortfolioManager
+
+const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) => {
+  const [isAddingImage, setIsAddingImage] = useState(false);
+  const [name, setName] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isCoverImage, setIsCoverImage] = useState(false);
+  const [selectedAlbum, setSelectedAlbum] = useState("");
+  const [isAddingAlbum, setIsAddingAlbum] = useState(false);
+  const [newAlbumName, setNewAlbumName] = useState("");
+  const [isAddingNewAlbum, setIsAddingNewAlbum] = useState(false);
+  const { user } = useUser();
+  const router = useRouter();
+
+  const albumsData = [
+    {
+      name: "Cover Images",
+      id: "cover-images",
+      coverImage: null,
+      imageCount: coverImageCount
+    },
+    ...albums.map(album => ({
+      id: album.id,
+      name: album.name,
+      coverImage: album.cover_image,
+      imageCount: album.image_count
+    }))
+  ];
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const resetForm = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setName("")
+    setIsCoverImage(false);
+    setSelectedAlbum("");
+    setUploadProgress(0);
+  };
+
+  const uploadImage = async () => {
+    if (!selectedFile) return;
+    setIsUploading(true);
+    if (isCoverImage) {
+      const { error } = await addCoverImage(selectedFile);
+      if (error) {
+        toast.error(error);
+      } else {
+        toast.success("Cover image uploaded successfully!");
+      }
+    } else {
+      const { error } = await addAlbumImage(selectedFile, selectedAlbum);
+      if (error) {
+        toast.error(error);
+      } else {
+        toast.success("Album image uploaded successfully!");
+      }
+    }
+    setIsUploading(false);
+    setIsAddingImage(false);
+  };
+
+  const handleDeleteItem = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this image from your portfolio?")) return;
+
+
+  };
+
+  const handleCreateAlbum = async (data: Omit<Album, "id">) => {
+    const { error } = await createAlbum(data.name);
+    if (error) {
+      toast.error(error);
+    } else {
+      toast.success("Album created successfully!");
+    }
+    setIsAddingNewAlbum(false);
+    setNewAlbumName("");
+  };
+
+  const handleOpenAlbumView = (albumId: string) => {
+    router.push(`/album/${albumId}`);
+  };
+
+
+  const albumForm = useForm<Omit<Album, "id">>({
+    resolver: zodResolver(albumSchema.omit({ id: true })),
+    defaultValues: {
+      name: "",
+    },
+  });
+
+  return (
+    <div className="container mx-auto px-4 py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Your Portfolio</h1>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsAddingNewAlbum(true)} variant="outline">
+            <Plus className="mr-2 h-4 w-4" /> New Album
+          </Button>
+          <Button onClick={() => setIsAddingImage(true)}>
+            <ImagePlus className="mr-2 h-4 w-4" /> Add Image
+          </Button>
+        </div>
+      </div>
+
+      <AlbumGrid
+        albums={albumsData}
+        onAlbumClick={handleOpenAlbumView}
+        isDeletable={true}
+      />
+
+      <Dialog open={isAddingImage} onOpenChange={setIsAddingImage}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add to Your Portfolio</DialogTitle>
+            <DialogDescription>Upload an image to showcase your nail art skills.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {!previewUrl ? (
+              <div
+                className="border-2 border-dashed rounded-md p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-muted transition-colors"
+                onClick={() => document.getElementById("image-upload")?.click()}
+              >
+                <ImageIcon className="h-10 w-10 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Click to upload an image, or drag and drop</p>
+                <p className="text-xs text-muted-foreground mt-1">JPEG, PNG or WebP (max. 5MB)</p>
+                <input id="image-upload" type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+              </div>
+            ) : (
+              <div className="relative aspect-square overflow-hidden rounded-md group">
+                <img
+                  src={previewUrl || "/placeholder.svg"}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                />
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="absolute top-2 right-2 z-10"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    setPreviewUrl(null);
+                  }}
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
+              </div>
+
+            )}
+
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={!isCoverImage ? "default" : "outline"}
+                  onClick={() => setIsCoverImage(false)}
+                  className="flex-1"
+                >
+                  Album Image
+                </Button>
+                <Button
+                  type="button"
+                  variant={isCoverImage ? "default" : "outline"}
+                  onClick={() => setIsCoverImage(true)}
+                  className="flex-1"
+                >
+                  Cover Image
+                </Button>
+              </div>
+            </div>
+
+
+            {!isCoverImage && (
+              <div className="space-y-2">
+                <Label>Album</Label>
+                <div className="flex gap-2">
+                  <Select disabled={isAddingAlbum} value={selectedAlbum} onValueChange={setSelectedAlbum}>
+                    <SelectTrigger className="flex-grow">
+                      <SelectValue placeholder="Select an album or create new" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {albums.map((album) => (
+                        <SelectItem key={album.id} value={album.id!}>
+                          {album.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select> 
+                </div>
+              </div>
+            )}
+
+            {isUploading && (
+              <div className="w-full bg-muted rounded-full h-2.5">
+                <div className="bg-primary h-2.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => {
+              setIsAddingImage(false);
+              resetForm();
+            }} variant="outline" disabled={isUploading}>
+              Cancel
+            </Button>
+            <Button onClick={uploadImage} disabled={!selectedFile || isUploading}>
+              {isUploading ? (
+                <>
+                  <div className="h-4 w-4 border-2 border-background border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Uploading...
+                </>
+              ) : (
+                "Upload"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Album Dialog */}
+      <Dialog open={isAddingNewAlbum} onOpenChange={setIsAddingNewAlbum}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Album</DialogTitle>
+            <DialogDescription>Organize your nail art into collections.</DialogDescription>
+          </DialogHeader>
+          <Form {...albumForm}>
+            <form onSubmit={albumForm.handleSubmit(handleCreateAlbum)}>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <FormField
+                    control={albumForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Album Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="mt-4">
+                <Button type="button" onClick={() => {
+                  setIsAddingNewAlbum(false);
+                  setNewAlbumName("");
+                }} variant="outline">
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  Create Album
+                </Button>
+              </DialogFooter>
+
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default PortfolioManager;

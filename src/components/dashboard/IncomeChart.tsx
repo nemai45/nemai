@@ -13,13 +13,17 @@ const data = [
 ]
 
 // Custom tooltip component
-// const CustomTooltip = () => {
-//     return (
-//       <div className="bg-white p-3 rounded-md shadow-md border border-border">
-//         <p className="text-sm text-foreground font-medium">{`${payload[0].payload.name}: $${payload[0].value}`}</p>
-//       </div>
-//     )
-// }
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white p-3 rounded-md shadow-md border border-border">
+        <p className="text-sm text-foreground font-medium">{`${payload[0].payload.name}: $${payload[0].value}`}</p>
+      </div>
+    )
+  }
+
+  return null
+}
 
 const IncomeChart = () => {
   // Summary calculations
@@ -55,7 +59,7 @@ const IncomeChart = () => {
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
             <XAxis dataKey="name" stroke="#888888" tickLine={false} axisLine={false} />
             <YAxis stroke="#888888" tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
-            <Tooltip content={<></>} cursor={{ fill: "rgba(193, 167, 226, 0.1)" }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(193, 167, 226, 0.1)" }} />
             <Bar dataKey="income" fill="#C1A7E2" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>

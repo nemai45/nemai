@@ -37,7 +37,7 @@ const HeroSection = () => {
               </Link>
               <Link
                 href="/auth"
-                className="bg-white text-primary border border-primary rounded-full px-6 py-3 font-medium hover:bg-primary/5 transition-colors flex items-center justify-center"
+                className="unicorn-secondary-button"
               >
                 Join as an Artist
               </Link>

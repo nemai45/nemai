@@ -1,35 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Star } from "lucide-react"
-
-const testimonials = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    role: "Regular Customer",
-    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100&h=100",
-    content:
-      "I've been using Unicorn Nails for months now, and I'm consistently impressed by the quality of artists on the platform. The booking process is seamless, and I love being able to see an artist's portfolio before making a decision.",
-    rating: 5,
-  },
-  {
-    id: 2,
-    name: "Michael Chen",
-    role: "First-time User",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100&h=100",
-    content:
-      "I surprised my wife with an at-home nail service for her birthday, and she was thrilled! The artist was professional, arrived on time, and did an amazing job. Will definitely use this platform again.",
-    rating: 5,
-  },
-  {
-    id: 3,
-    name: "Jessica Martinez",
-    role: "Nail Artist",
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100&h=100",
-    content:
-      "As a nail artist, this platform has helped me grow my client base significantly. The booking system is user-friendly, and I appreciate how easy it is to showcase my portfolio and manage my schedule.",
-    rating: 4,
-  },
-]
+import { testimonials } from "@/lib/mock-data"
 
 const Testimonials = () => {
   return (
@@ -66,7 +37,7 @@ const Testimonials = () => {
                     ))}
                   </div>
                 </div>
-                <p className="text-foreground italic">{testimonial.content}</p>
+                <p className="text-foreground italic">&quot;{testimonial.content}&quot;</p>
               </CardContent>
             </Card>
           ))}
