@@ -1,4 +1,5 @@
 import OnBoarding from '@/components/OnBoarding'
+import { getUserRole } from '@/lib/get-user-role'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 
@@ -8,8 +9,12 @@ const page = async () => {
   if (!user || !user.email) {
     return redirect('/login')
   }
+  const role = await getUserRole()
+  if (!role) {
+    return redirect('/login')
+  }
   return (
-    <OnBoarding email={user.email}/>
+    <OnBoarding email={user.email} role={role} />
   )
 }
 

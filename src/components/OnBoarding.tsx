@@ -6,9 +6,11 @@ import ProfileCard from './ProfileCard'
 
 interface OnBoardingProps {
   email: string;
+  role: string;
 }
 
-const OnBoarding:FC<OnBoardingProps> = ({ email }) => {
+const OnBoarding:FC<OnBoardingProps> = ({ email, role }) => {
+  
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
     email: email,
     first_name: '',
@@ -28,7 +30,7 @@ const OnBoarding:FC<OnBoardingProps> = ({ email }) => {
 
   return (
     <div className="flex items-center justify-center w-full h-full p-4">
-      <ProfileCard handleSubmit={onBoardUser} personalInfo={personalInfo} professionalInfo={professionalInfo}/>
+      <ProfileCard handleSubmit={onBoardUser} personalInfo={personalInfo} professionalInfo={role === 'artist' ? professionalInfo : null}/>
     </div>
   )
 }
