@@ -1,10 +1,7 @@
 "use client"
 import { onBoardUser } from '@/action/user'
-import { Card, CardContent } from '@/components/ui/card'
-import { useUser } from '@/hooks/use-user'
 import { PersonalInfo, ProfessionalInfo } from '@/lib/type'
-import { useRouter } from 'next/navigation'
-import { FC, useEffect, useState } from 'react'
+import { FC, useState } from 'react'
 import ProfileCard from './ProfileCard'
 
 interface OnBoardingProps {
@@ -12,8 +9,6 @@ interface OnBoardingProps {
 }
 
 const OnBoarding:FC<OnBoardingProps> = ({ email }) => {
-  const router = useRouter()
-
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
     email: email,
     first_name: '',

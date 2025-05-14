@@ -1,83 +1,61 @@
 "use client"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Artist } from "@/lib/type"
+import { MapPin } from "lucide-react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Star } from "lucide-react"
 
 interface ArtistCardProps {
-  id: string
-  name: string
-  location?: string
-  bio?: string
-  experience?: number
-  avgRating?: number
-  avatarUrl?: string
-  servicesCount?: number
-  priceRange?: string
+  artist: Artist
 }
 
 const ArtistCard = ({
-  id,
-  name,
-  location,
-  bio,
-  experience,
-  avgRating,
-  avatarUrl,
-  servicesCount,
-  priceRange,
+  artist,
 }: ArtistCardProps) => {
   const router = useRouter()
 
   const viewArtistProfile = () => {
-    router.push(`/artist-profile/${id}`)
-  }
-
-  // Extract first letter of first and last name for avatar fallback
-  const getInitials = () => {
-    if (!name) return "NA"
-    const parts = name.split(" ")
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
-    }
-    return name.substring(0, 2).toUpperCase()
+    router.push(`/artist-profile/${artist.id}`)
   }
 
   return (
-    <Card className="h-full overflow-hidden hover:shadow-md transition-shadow">
-      <CardHeader className="pb-2">
-        <div className="flex items-center gap-4">
-          <Avatar className="h-12 w-12">
-            <AvatarImage src={avatarUrl || "/placeholder.svg"} alt={name} />
-            <AvatarFallback>{getInitials()}</AvatarFallback>
-          </Avatar>
-          <div>
-            <CardTitle className="text-lg">{name}</CardTitle>
-            {location && <CardDescription className="text-sm">{location}</CardDescription>}
+    <Card
+      key={artist.id}
+      className="unicorn-card overflow-hidden group hover:scale-[1.02] transition-transform duration-300"
+    >
+      <div className="relative aspect-square">
+        <img
+          src={artist.logo || "/hero.jpg"}
+          alt={artist.business_name}
+          className="object-cover w-full h-full"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div className="absolute bottom-4 left-4 right-4">
+            <Link href={`/artist-profile/${artist.id}`}>
+              <Button className="w-full unicorn-button">Book Now</Button>
+            </Link>
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-2 pb-4">
-        {bio && <p className="text-sm text-muted-foreground line-clamp-2">{bio}</p>}
-        <div className="flex flex-wrap gap-2 mt-2">
-          {avgRating && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Star className="h-3 w-3" />
-              {avgRating.toFixed(1)}
-            </Badge>
-          )}
-          {experience && <Badge variant="outline">{experience} years exp.</Badge>}
-          {servicesCount && <Badge variant="outline">{servicesCount} services</Badge>}
-          {priceRange && <Badge variant="secondary">{priceRange}</Badge>}
+      </div>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-full overflow-hidden">
+            <img
+              src={artist.logo || "/hero.jpg"}
+              alt={`${artist.business_name} profile`}
+              className="object-cover w-full h-full"
+            />
+          </div>
+          <div>
+            <h3 className="font-semibold text-lg">{artist.business_name}</h3>
+          </div>
+        </div>
+        <div className="flex items-center text-muted-foreground text-sm mt-2">
+          <MapPin className="w-4 h-4 mr-1" />
+          <span>{artist.address}</span>
         </div>
       </CardContent>
-      <CardFooter>
-        <Button variant="outline" className="w-full" onClick={viewArtistProfile}>
-          View Profile
-        </Button>
-      </CardFooter>
     </Card>
   )
 }

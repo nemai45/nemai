@@ -189,3 +189,61 @@ input {
     @apply bg-background text-foreground;
   }
 }
+
+
+.nail-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  width: 100px;
+  margin: auto;
+  position: relative;
+}
+
+.nail {
+  width: 40px;
+  height: 60px;
+  background-color: #ffe0e6;
+  border-radius: 50% 50% 40% 40%;
+  position: relative;
+  box-shadow: 0 0 0 4px #e3b6c1;
+  overflow: hidden;
+}
+
+.paint {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #ff69b4;
+  animation: paintNail 2s infinite;
+}
+
+@keyframes paintNail {
+  0% {
+    top: 100%;
+  }
+  50% {
+    top: 0;
+  }
+  100% {
+    top: 100%;
+  }
+}
+
+.loading-text {
+  margin-top: 20px;
+  font-family: 'Courier New', Courier, monospace;
+  color: #ff69b4;
+  font-size: 1rem;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; }
+}

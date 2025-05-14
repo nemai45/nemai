@@ -1,18 +1,17 @@
 import BookingsList from '@/components/dashboard/BookingsList';
+import Error from '@/components/Error';
 import { getBookings } from '@/lib/user'
 import React from 'react'
 
 const page = async () => {
-  const { data, error } = await getBookings();
-  if (error) {
-    return <div>{error}</div>;
+  const result = await getBookings();
+  if ('error' in result) {
+    return <Error error={result.error}/>
   }
-  if (!data) {
-    return <div>No bookings found</div>;
-  }
+
   return (
     <div>
-      <BookingsList bookings={data} />
+      <BookingsList bookings={result.data} />
     </div>
   )
 }

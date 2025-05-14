@@ -9,11 +9,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useUser } from "@/hooks/use-user";
 import { Image as ImageType } from "@/lib/type";
-import { Edit, MoreVertical, Trash } from "lucide-react";
-import Image from "next/image";
-import { toast } from "sonner";
+import { MoreVertical, Trash } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface AlbumViewProps {
   albumId: string;
@@ -25,6 +25,12 @@ const AlbumView = ({
   items,
 }: AlbumViewProps) => {
   const router = useRouter();
+  const { user } = useUser();
+  if (!user) {
+    router.push("/login");
+    return;
+  }
+  
   const deleteImage = async (imageId: string, fullPath: string) => {
     if (!confirm("Are you sure you want to delete this image?")) {
       return;
@@ -67,9 +73,11 @@ const AlbumView = ({
                 width={100}
                 height={100}
               />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200"></div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              {item.artist_id === user.id && (
+                <>
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200"></div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -89,7 +97,9 @@ const AlbumView = ({
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
-              </DropdownMenu>
+                </DropdownMenu>
+                </>
+              )}
             </div>
           ))}
         </div>

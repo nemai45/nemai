@@ -4,6 +4,7 @@ import { SidebarLayout, SidebarMenuItemType } from '@/components/Sidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { getUserRole } from '@/lib/get-user-role';
 import { createClient } from '@/utils/supabase/server';
+import { redirect } from 'next/navigation';
 import React from 'react';
 
 const layout = async ({
@@ -11,6 +12,12 @@ const layout = async ({
 }: {
   children: React.ReactNode
 }) => {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+
   const adminMenuItems: SidebarMenuItemType[] = [
     {
       title: "Dashboard",
@@ -51,6 +58,7 @@ const layout = async ({
     { title: "Availability", path: "/artist-dashboard/availability", icon: "Clock" },
     { title: "Profile", path: "/artist-dashboard/profile", icon: "UserCircle" },
     { title: "History", path: "/artist-dashboard/history", icon: "History" },
+    { title: "Preview", path: `/artist-profile/${user.id}`, icon: "Eye" },
   ];
 
   const customerMenuItems: SidebarMenuItemType[] = [

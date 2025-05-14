@@ -3,35 +3,34 @@ import { getProfile } from '@/lib/user'
 import ProfileCard from './ProfileCard'
 import { createClient } from '@/utils/supabase/server';
 import { getUserRole } from '@/lib/get-user-role';
+import Error from './Error';
+import { redirect } from 'next/navigation';
 
 const Profile = async () => {
     const supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error) {
-        return null
+        return <Error error={error.message} />
     }
     if (!user) {
-        return null
+        redirect('/login')
     }
     const role = await getUserRole();
     if (!role) {
-        return null
+        redirect('/login')
     }
-    const { profile, error: profileError } = await getProfile(user.id, role);
-    if (profileError) {
-        console.error(profileError)
-        return null
-    }
-    if (!profile) {
-        return null
-    }
-
+    const result = await getProfile(user.id, role);
+    if ('error' in result) {
+        console.error(result.error)
+        return <Error error={result.error} />
+    } 
+    
     return (
         <div className="flex items-center justify-center w-full h-full p-4">
             <ProfileCard
                 handleSubmit={updateUser}
-                personalInfo={profile.personal}
-                professionalInfo={profile.professional}
+                personalInfo={result.data.personal}
+                professionalInfo={result.data.professional}
             />
         </div>
     )

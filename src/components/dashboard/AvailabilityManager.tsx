@@ -6,9 +6,9 @@ import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Booking, type BlockedDate } from "@/lib/type"
-import { Availability } from "@/lib/type"
-import { format } from "date-fns"
+import { Availability, BookingInfo, type BlockedDate } from "@/lib/type"
+import { timeToMinutes } from "@/lib/utils"
+import { format, isBefore, startOfDay } from "date-fns"
 import { Clock, Plus, X } from "lucide-react"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
@@ -24,20 +24,8 @@ interface AvailabilityManagerProps {
   availability: Availability[]
   maxClients: number
   blockedDates: BlockedDate[]
-  bookings: {
-    service_id: string,
-    start_time: number,
-    date: string,
-    duration: number,
-  }[]
+  bookings: BookingInfo[]
 }
-
-
-function timeToMinutes(time: string) {
-  const [hours, minutes] = time.split(':').map(Number);
-  return hours * 60 + minutes;
-}
-
 
 const AvailabilityManager = ({
   availability,
@@ -132,91 +120,195 @@ const AvailabilityManager = ({
     return day === 0 ? 6 : day - 1;
   }
 
-  const getAvailableTimeSlots = () => {
+  const availableTimeSlots = useMemo(() => {
     const dayOfWeek = getSelectedDayOfWeek();
     return weeklyAvailability.filter(slot => slot.dayOfWeek === dayOfWeek);
-  }
-
-  const availableTimeSlots = useMemo(() => {
-    return getAvailableTimeSlots();
-  }, [weeklyAvailability, selectedDate]);
+  }, [weeklyAvailability, selectedDate, getSelectedDayOfWeek]);
 
   const getBlockStartTimeOptions = useMemo(() => {
     if (availableTimeSlots.length === 0) return [];
 
-    const allTimeOptions = TIME_OPTIONS.filter(time => {
+    const bookingsMap = new Map();
+
+    if (selectedDate) {
+      const formattedDate = format(selectedDate, "yyyy-MM-dd");
+      const bookingsForDay = bookings.filter(booking =>
+        booking.date === formattedDate
+      );
+
+      bookingsForDay.forEach(booking => {
+        const startMinute = booking.start_time;
+        const endMinute = booking.start_time + booking.service.duration;
+
+        for (let minute = startMinute; minute < endMinute; minute += 15) {
+          bookingsMap.set(minute, (bookingsMap.get(minute) || 0) + 1);
+        }
+      });
+
+      const blockedTimesForDay = blockedDates.filter(date =>
+        date.date === formattedDate
+      );
+
+      const blockedMap = new Map();
+      blockedTimesForDay.forEach(date => {
+        const startTime = date.start_time;
+        const endTime = date.end_time;
+
+        TIME_OPTIONS.forEach(time => {
+          if (time >= startTime && time < endTime) {
+            blockedMap.set(time, (blockedMap.get(time) || 0) + date.no_of_artist);
+          }
+        });
+      });
+
+      return TIME_OPTIONS.filter(time => {
+        const isInAvailableSlot = availableTimeSlots.some(slot =>
+          time >= slot.startTime && time < slot.endTime
+        );
+
+        if (!isInAvailableSlot) return false;
+        const blockedArtists = blockedMap.get(time) || 0;
+        const bookedArtists = bookingsMap.get(timeToMinutes(time)) || 0;
+
+        return (maxClients - blockedArtists - bookedArtists) > 0;
+      });
+    }
+
+    return TIME_OPTIONS.filter(time => {
       return availableTimeSlots.some(slot =>
         time >= slot.startTime && time < slot.endTime
       );
     });
-
-    if (selectedDate) {
-      const formattedDate = format(selectedDate, "yyyy-MM-dd");
-      const blockedTimesForDay = blockedDates.filter(date =>
-        date.blocked_date === formattedDate
-      );
-
-      const bookingsForDay = bookings.filter(booking =>
-        booking.date === formattedDate
-      )
-
-      const timeOptions = allTimeOptions.map(time => {
-        const startTime = time
-        const artistUsed = blockedTimesForDay.reduce((acc, date) => {
-          if (startTime >= date.start_time && startTime < date.end_time) {
-            return acc + date.no_of_artists
-          }
-          return acc
-        }, 0)
-
-        const bookedArtists = bookingsForDay.reduce((acc, booking) => {
-          if (timeToMinutes(time) >= booking.start_time && timeToMinutes(time) < booking.start_time + booking.duration) {
-            return acc + 1
-          }
-          return acc
-        }, 0)
-        return {
-          time,
-          count: maxClients - artistUsed - bookedArtists
-        }
-      })
-
-      const finalTimeOptions = timeOptions.filter(option => option.count > 0)
-      return finalTimeOptions.map(option => option.time)
-    }
-    return allTimeOptions;
-  }, [availableTimeSlots, selectedDate, blockedDates, bookings]);
+  }, [availableTimeSlots, selectedDate, blockedDates, bookings, maxClients]);
 
   const getBlockEndTimeOptions = useMemo(() => {
-    if (!blockedTimeSlot.startTime || availableTimeSlots.length === 0 || !selectedDate) return [];
-
-    const relevantSlots = availableTimeSlots.filter(slot =>
-      blockedTimeSlot.startTime >= slot.startTime &&
-      blockedTimeSlot.startTime < slot.endTime
-    );
-
-    if (relevantSlots.length === 0) return [];
-
-    const latestEnd = relevantSlots.reduce((latest, slot) =>
-      slot.endTime > latest ? slot.endTime : latest
-      , "00:00");
+    if (!selectedDate || !blockedTimeSlot.startTime || availableTimeSlots.length === 0) return [];
 
     const formattedDate = format(selectedDate, "yyyy-MM-dd");
+    const selectedStartTime = blockedTimeSlot.startTime;
 
-    const blockedTimesForDay = blockedDates.filter(date =>
-      date.blocked_date === formattedDate
+    const currentSlot = availableTimeSlots.find(slot =>
+      selectedStartTime >= slot.startTime && selectedStartTime < slot.endTime
     );
 
-    const earliestBlockedStartTime = blockedTimesForDay.reduce((earliest, slot) =>
-      slot.start_time < earliest ? slot.start_time : earliest
-      , "23:59");
+    if (!currentSlot) return [];
 
-    const latestEndTime = latestEnd < earliestBlockedStartTime ? latestEnd : earliestBlockedStartTime
+    const blockedTimesForDay = blockedDates.filter(date => date.date === formattedDate);
+    const blockMap = new Map();
 
-    return TIME_OPTIONS.filter(time =>
-      time > blockedTimeSlot.startTime && time <= latestEndTime
+    blockedTimesForDay.forEach(date => {
+      if (!(date.end_time <= selectedStartTime || date.start_time >= currentSlot.endTime)) {
+        const start = Math.max(timeToMinutes(selectedStartTime), timeToMinutes(date.start_time));
+        const end = Math.min(timeToMinutes(currentSlot.endTime), timeToMinutes(date.end_time));
+
+        for (let minute = start; minute < end; minute += 15) {
+          blockMap.set(minute, (blockMap.get(minute) || 0) + date.no_of_artist);
+        }
+      }
+    });
+
+    const bookingsForDay = bookings.filter(booking => booking.date === formattedDate);
+    const bookingMap = new Map();
+
+    bookingsForDay.forEach(booking => {
+      const bookingStart = booking.start_time;
+      const bookingEnd = booking.start_time + booking.service.duration;
+      const ourStart = timeToMinutes(selectedStartTime);
+      const ourEnd = timeToMinutes(currentSlot.endTime);
+
+      if (!(bookingEnd <= ourStart || bookingStart >= ourEnd)) {
+        const start = Math.max(ourStart, bookingStart);
+        const end = Math.min(ourEnd, bookingEnd);
+
+        for (let minute = start; minute < end; minute += 15) {
+          bookingMap.set(minute, (bookingMap.get(minute) || 0) + 1);
+        }
+      }
+    });
+
+    const possibleEndTimes = TIME_OPTIONS.filter(
+      time => time > selectedStartTime && time <= currentSlot.endTime
     );
-  }, [blockedTimeSlot.startTime, availableTimeSlots, selectedDate, blockedDates]);
+
+    const validEndTimes = [];
+
+    for (const endTime of possibleEndTimes) {
+      let isValid = true;
+
+      for (let minute = timeToMinutes(selectedStartTime); minute < timeToMinutes(endTime); minute += 15) {
+        const blockedArtists = blockMap.get(minute) || 0;
+        const bookedArtists = bookingMap.get(minute) || 0;
+
+        if (blockedArtists + bookedArtists >= maxClients) {
+          isValid = false;
+          break;
+        }
+      }
+
+      if (isValid) {
+        validEndTimes.push(endTime);
+      } else {
+        break;
+      }
+    }
+
+    return validEndTimes;
+  }, [selectedDate, blockedTimeSlot.startTime, availableTimeSlots, blockedDates, bookings, maxClients]);
+
+  const getAvailableArtistOptions = useMemo(() => {
+    if (!selectedDate || !blockedTimeSlot.startTime || !blockedTimeSlot.endTime) return [];
+
+    const formattedDate = format(selectedDate, "yyyy-MM-dd");
+    const startTimeMinutes = timeToMinutes(blockedTimeSlot.startTime);
+    const endTimeMinutes = timeToMinutes(blockedTimeSlot.endTime);
+
+    const blockedMinutes = new Map(); 
+    const blockedTimesForDay = blockedDates.filter(date => date.date === formattedDate);
+
+    blockedTimesForDay.forEach(date => {
+      const blockStartMinutes = timeToMinutes(date.start_time);
+      const blockEndMinutes = timeToMinutes(date.end_time);
+
+      const overlapStart = Math.max(startTimeMinutes, blockStartMinutes);
+      const overlapEnd = Math.min(endTimeMinutes, blockEndMinutes);
+
+      if (overlapStart < overlapEnd) {
+        for (let minute = overlapStart; minute < overlapEnd; minute += 15) {
+          blockedMinutes.set(minute, (blockedMinutes.get(minute) || 0) + date.no_of_artist);
+        }
+      }
+    });
+
+    const bookedMinutes = new Map();
+    const bookingsForDay = bookings.filter(booking => booking.date === formattedDate);
+
+    bookingsForDay.forEach(booking => {
+      const bookingStartMinutes = booking.start_time;
+      const bookingEndMinutes = booking.start_time + booking.service.duration;
+
+      const overlapStart = Math.max(startTimeMinutes, bookingStartMinutes);
+      const overlapEnd = Math.min(endTimeMinutes, bookingEndMinutes);
+
+      if (overlapStart < overlapEnd) {
+        for (let minute = overlapStart; minute < overlapEnd; minute += 15) {
+          bookedMinutes.set(minute, (bookedMinutes.get(minute) || 0) + 1);
+        }
+      }
+    });
+
+    let minAvailable = maxClients;
+
+    for (let minute = startTimeMinutes; minute < endTimeMinutes; minute += 15) {
+      const blockedArtists = blockedMinutes.get(minute) || 0;
+      const bookedArtists = bookedMinutes.get(minute) || 0;
+      const available = maxClients - blockedArtists - bookedArtists;
+
+      if (available <= 0) return [];
+      minAvailable = Math.min(minAvailable, available);
+    }
+
+    return Array.from({ length: minAvailable }, (_, i) => i + 1);
+  }, [selectedDate, blockedTimeSlot.startTime, blockedTimeSlot.endTime, blockedDates, bookings, maxClients]);
 
   const handleBlockDate = async () => {
     if (!selectedDate) {
@@ -243,7 +335,7 @@ const AvailabilityManager = ({
     const formattedDate = format(selectedDate, "yyyy-MM-dd")
 
     const existingBlock = blockedDates.find((date) =>
-      date.blocked_date === formattedDate &&
+      date.date === formattedDate &&
       ((date.start_time && date.end_time) ?
         !(endTime <= date.start_time || startTime >= date.end_time) :
         true)
@@ -267,10 +359,10 @@ const AvailabilityManager = ({
     }
 
     const newBlockedDate: Omit<BlockedDate, "id"> = {
-      blocked_date: formattedDate,
+      date: formattedDate,
       start_time: startTime,
       end_time: endTime,
-      no_of_artists: parseInt(numberOfArtists)
+      no_of_artist: parseInt(numberOfArtists)
     }
 
     const newId = crypto.randomUUID()
@@ -312,17 +404,8 @@ const AvailabilityManager = ({
     toast.success("Date unblocked successfully.")
   }
 
-  const isDateBlocked = (date: Date) => {
-    const formattedDate = format(date, "yyyy-MM-dd")
-    if (formattedDate < format(new Date(), "yyyy-MM-dd")) {
-      return true
-    }
-    return blockedDates.some((blockedDate) => blockedDate.blocked_date === formattedDate)
-  }
-
   const isAvailableDate = (date: Date) => {
-    const formattedDate = format(date, "yyyy-MM-dd")
-    return formattedDate < format(new Date(), "yyyy-MM-dd")
+    return isBefore(date, startOfDay(new Date()))
   }
 
   const selectedDateHasAvailability = () => {
@@ -573,9 +656,9 @@ const AvailabilityManager = ({
                     <SelectValue placeholder="No of Artists" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: maxClients }, (_, i) => (
-                      <SelectItem key={i} value={(i + 1).toString()}>
-                        {i + 1}
+                    {getAvailableArtistOptions.map((option) => (
+                      <SelectItem key={option} value={option.toString()}>
+                        {option}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -603,12 +686,12 @@ const AvailabilityManager = ({
                     className="flex justify-between items-center bg-muted/50 p-2 rounded-md"
                   >
                     <div>
-                      <div className="font-medium">{format(blockedDate.blocked_date, "dd-MM-yyyy")}</div>
+                      <div className="font-medium">{format(blockedDate.date, "dd-MM-yyyy")}</div>
                       {blockedDate.start_time && blockedDate.end_time && (
                         <div className="text-sm text-muted-foreground">
                           {blockedDate.start_time.substring(0, 5)} - {blockedDate.end_time.substring(0, 5)}
-                          {blockedDate.no_of_artists && (
-                            <span className="ml-2">({blockedDate.no_of_artists} artists)</span>
+                          {blockedDate.no_of_artist && (
+                            <span className="ml-2">({blockedDate.no_of_artist} artists)</span>
                           )}
                         </div>
                       )}

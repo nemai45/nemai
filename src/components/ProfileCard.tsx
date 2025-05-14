@@ -1,29 +1,33 @@
 "use client";
 import { useUser } from '@/hooks/use-user';
-import { CombinedInfo, combinedSchema, PersonalInfo, personalInfoSchema, ProfessionalInfo } from '@/lib/type';
+import { CombinedInfo, combinedSchema, PersonalInfo, ProfessionalInfo } from '@/lib/type';
+import { getLocation } from '@/lib/utils';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Separator } from '@radix-ui/react-separator';
+import { Camera } from 'lucide-react';
 import { FC, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import NailLoader from './NailLoader';
+import { Avatar, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Card, CardContent, CardFooter } from './ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
-import { Avatar, AvatarImage } from './ui/avatar';
-import { Camera } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface ProfileCardProps {
     personalInfo: PersonalInfo
     professionalInfo: ProfessionalInfo | null
-    handleSubmit: (data: CombinedInfo, logo: File | null) => Promise<{ error: string | null }>
+    handleSubmit: (data: CombinedInfo, logo: File | null, point: { lat: number, lng: number } | null) => Promise<{ error: string | null }>
 }
 
 const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, handleSubmit }) => {
     const { role } = useUser()
     const [logo, setLogo] = useState<File | null>(null)
     const [logoUrl, setLogoUrl] = useState<string | null>(null)
+    const [loading, setLoading] = useState<boolean>(false)
+    const [isAddressChanged, setIsAddressChanged] = useState<boolean>(false)
     const form = useForm({
         resolver: zodResolver(combinedSchema),
         defaultValues: {
@@ -33,20 +37,37 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
     });
 
     const onSubmit = async (data: CombinedInfo) => {
+        setLoading(true)
         if(data.professional && data.professional.no_of_artists < 1) {
             toast.error('Max clients must be greater than 0')
+            setLoading(false)
             return;
         }
-        const { error } = await handleSubmit(data, logo)
+        let point: { lat: number, lng: number } | null = null;
+        if (data.professional) {
+            if (isAddressChanged) {
+                const { lat, lng, error } = await getLocation(data.professional.address)
+                if (error) {
+                    toast.error(error)
+                    setLoading(false)
+                    return;
+                }
+                point = { lat, lng }
+            }
+        }
+        const { error } = await handleSubmit(data, logo, point)
         if (error) {
             toast.error(error)
+            setLoading(false)
             return;
         }
         toast.success('Profile updated successfully')
+        setLoading(false)
     }
 
     return (
         <Form {...form}>
+            {loading && <NailLoader />}
             <form
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="w-full max-w-3xl space-y-6"
@@ -178,7 +199,10 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
                                             <FormItem>
                                                 <FormLabel>Address</FormLabel>
                                                 <FormControl>
-                                                    <Input {...field} />
+                                                    <Input {...field} onChange={(e) => {
+                                                        setIsAddressChanged(true)
+                                                        field.onChange(e)
+                                                    }} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -204,7 +228,7 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
                                             <FormItem>
                                                 <FormLabel>No. of Artists</FormLabel>
                                                 <FormControl>
-                                                    <Input min={1} type="number" {...field} onChange={(e) => {
+                                                    <Input min={1} defaultValue={1} type="number" {...field} onChange={(e) => {
                                                         const value = parseInt(e.target.value)
                                                         if (value < 1) {
                                                             field.onChange(1)
@@ -223,7 +247,7 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
                                             <FormItem>
                                                 <FormLabel>Booking Month Limit</FormLabel>
                                                 <FormControl>
-                                                    <Input min={1} max={3} type="number" {...field} onChange={(e) => {
+                                                    <Input min={1} defaultValue={1} max={3} type="number" {...field} onChange={(e) => {
                                                         const value = parseInt(e.target.value)
                                                         if (value < 1) {
                                                             field.onChange(1)
@@ -254,7 +278,7 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
                     </CardContent>
 
                     <CardFooter className="flex justify-end">
-                        <Button type="submit">Save</Button>
+                        <Button type="submit" disabled={loading}>Save</Button>
                     </CardFooter>
                 </Card>
             </form>

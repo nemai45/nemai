@@ -11,17 +11,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger
 } from '@/components/ui/collapsible';
-import { cn } from '@/lib/utils';
+import { cn, minutesToTime } from '@/lib/utils';
 import type { BookingInfo } from '@/lib/type';
 
 interface BookingCardProps {
   booking: BookingInfo;
-}
-
-function minutesToTime(minutes: number) {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 }
 
 export function BookingCard({ booking }: BookingCardProps) {

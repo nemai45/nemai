@@ -1,8 +1,5 @@
+import { deleteAlbum } from "@/action/user";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { MoreVertical } from "lucide-react";
-import { Trash } from "lucide-react";
-import { Button } from "./ui/button";
-import Image from "next/image";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,15 +8,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { deleteAlbum } from "@/action/user";
+import { AlbumWithImageCount } from "@/lib/type";
+import { MoreVertical, Trash } from "lucide-react";
+import Image from "next/image";
+import { Button } from "./ui/button";
 
 interface AlbumGridProps {
-  albums: {
-    id: string;
-    name: string;
-    coverImage: string | null;
-    imageCount: number;
-  }[];
+  albums: AlbumWithImageCount[];
   onAlbumClick: (albumId: string) => void;
   isDeletable: boolean;
 }
@@ -36,7 +31,7 @@ const AlbumGrid = ({ albums, onAlbumClick, isDeletable }: AlbumGridProps) => {
           <CardContent className="p-0">
             <div className="relative aspect-square overflow-hidden">
               <Image
-                src={album.coverImage ? `https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${album.coverImage}` : "/hero.jpg"}
+                src={album.cover_image ? `https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${album.cover_image}` : "/hero.jpg"}
                 width={100}
                 height={100}
                 alt={album.name}
@@ -78,7 +73,7 @@ const AlbumGrid = ({ albums, onAlbumClick, isDeletable }: AlbumGridProps) => {
             <div className="w-full">
               <p className="font-medium truncate">{album.name}</p>
               <p className="text-sm text-muted-foreground">
-                {album.imageCount} {album.imageCount === 1 ? "item" : "items"}
+                {album.image_count} {album.image_count === 1 ? "item" : "items"}
               </p>
             </div>
           </CardFooter>

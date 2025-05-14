@@ -20,7 +20,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "No blocked dates found" }, { status: 404 });
   }
 
-  const { data: maxClients, error: maxClientsError } = await supabase.from("artist_profile").select("max_client, booking_month_limit").eq("id", id).single();
+  const { data: maxClients, error: maxClientsError } = await supabase.from("artist_profile").select("no_of_artists, booking_month_limit").eq("id", id).single();
   if (maxClientsError) {
     return NextResponse.json({ error: maxClientsError.message }, { status: 500 });
   }
@@ -34,7 +34,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!bookedSlots) {
     return NextResponse.json({ error: "No booked slots found" }, { status: 404 });
   }
-  const response = slotDataSchema.safeParse({ availability, blockedDates, maxClients: maxClients.max_client, bookingMonthLimit: maxClients.booking_month_limit, bookedSlots });
+  const response = slotDataSchema.safeParse({ availability, blockedDates, maxClients: maxClients.no_of_artists, bookingMonthLimit: maxClients.booking_month_limit, bookedSlots });
   if (!response.success) {
     return NextResponse.json({ error: response.error.message }, { status: 400 });
   }

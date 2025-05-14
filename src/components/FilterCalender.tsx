@@ -1,10 +1,10 @@
 'use client'
 import { BookingInfo } from '@/lib/type';
+import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
+import { useState } from 'react';
 import BookingList from './dashboard/BookingsList';
 import { Button } from './ui/button';
-import React, { useState } from 'react'
-import { format } from 'date-fns';
-import { CalendarIcon, CalendarX } from 'lucide-react';
 import { Calendar } from './ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 

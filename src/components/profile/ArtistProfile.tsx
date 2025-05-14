@@ -22,12 +22,6 @@ const ArtistProfile = ({ artistProfile }: ArtistProfileProps) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isBooked, setIsBooked] = useState(false)
   const [bookedService, setBookedService] = useState<BookedService | null>(null)
-  const albums = artistProfile.albums.map((album) => ({
-    id: album.id,
-    name: album.name,
-    coverImage: album.cover_image,
-    imageCount: album.image_count
-  }))
 
   return (
     <>
@@ -112,7 +106,7 @@ const ArtistProfile = ({ artistProfile }: ArtistProfileProps) => {
             <CardTitle>Portfolio</CardTitle>
           </CardHeader>
           <CardContent>
-            <AlbumGrid albums={albums} onAlbumClick={(albumId) => {
+            <AlbumGrid albums={artistProfile.albums} onAlbumClick={(albumId) => {
               router.push(`/album/${albumId}`)
             }} isDeletable={false} />
           </CardContent>

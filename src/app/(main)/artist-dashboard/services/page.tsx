@@ -2,25 +2,24 @@ import { getArtistServices } from '@/lib/user'
 import ServiceManager from '@/components/dashboard/ServiceManager'
 import React from 'react'
 import { createClient } from '@/utils/supabase/server';
+import Error from '@/components/Error';
 
 const page = async () => {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error) {
-    return null
+    return <Error error={error.message} />
   }
   if (!user) {
-    return null
+    return <Error error="User not found" />
   }
-  const { data, error: servicesError} = await getArtistServices(user.id)
-  if(servicesError) {
-    return null
+  const result = await getArtistServices(user.id)
+  if('error' in result) {
+    return <Error error={result.error} />
   }
-  if(!data) {
-    return null
-  }
+
   return (
-    <ServiceManager services={data} />
+    <ServiceManager services={result.data} />
   )
 }
 

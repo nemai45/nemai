@@ -3,24 +3,27 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { getUserRole } from "./get-user-role";
 import {
+  AlbumWithImageCount,
+  Artist,
   ArtistProfile,
+  Availability,
+  BlockedDate,
+  BookingInfo,
   bookingInfoSchema,
-  PersonalInfo,
+  CombinedInfo,
+  DBAvailability,
+  DBBlockedDate,
+  Image,
   personalInfoSchema,
-  ProfessionalInfo,
   professionalInfoSchema,
+  Result,
+  Service
 } from "./type";
 
 export const getProfile = async (
   userId: string,
   role: string
-): Promise<{
-  error?: string;
-  profile?: {
-    personal: PersonalInfo;
-    professional: ProfessionalInfo | null;
-  };
-}> => {
+) : Promise<Result<CombinedInfo>> => {
   const supabase = await createClient();
   const { data: personal, error: personalError } = await supabase
     .from("users")
@@ -40,7 +43,7 @@ export const getProfile = async (
   if (role === "artist") {
     const { data: professional, error: professionalError } = await supabase
       .from("artist_profile")
-      .select("business_name, logo, bio, address, upi_id, max_client, booking_month_limit, location")
+      .select("business_name, logo, bio, address, upi_id, no_of_artists, booking_month_limit, location")
       .eq("id", userId)
       .maybeSingle();
     if (professionalError) {
@@ -54,23 +57,23 @@ export const getProfile = async (
       return { error: "Something went wrong!!" };
     }
     return {
-      profile: {
+      data: {
         personal: personalInfo.data,
         professional: professionalInfo.data,
       },
     };
   }
   return {
-    profile: {
+    data: {
       personal: personalInfo.data,
       professional: null,
     },
   };
 };
 
-export const getAlbums = async (userId: string) => {
+export const getAlbums = async (userId: string) : Promise<Result<{albums: AlbumWithImageCount[], coverImageCount: number}>> => {
   const supabase = await createClient();
-  const { data, error: DBError } = await supabase.rpc(
+  const { data: albums, error: DBError } = await supabase.rpc(
     "get_albums_with_image_count",
     { user_id: userId }
   );
@@ -88,17 +91,26 @@ export const getAlbums = async (userId: string) => {
       error: coverImageCountError.message,
     };
   }
-
+  const data = albums.map((album) => ({
+    id: album.album_id,
+    name: album.album_name,
+    image_count: album.image_count,
+    cover_image: album.cover_image,
+    artist_id: userId,
+  }));
   return {
-    data: data,
-    coverImageCount: count || 0,
+    data: {
+      albums: data,
+      coverImageCount: count || 0,
+    },
   };
 };
-export const getCoverImages = async (artistId: string) => {
+
+export const getCoverImages = async (artistId: string): Promise<Result<Image[]>> => {
   const supabase = await createClient();
   const { data, error: DBError } = await supabase
     .from("cover_images")
-    .select("id, url")
+    .select("id, url, artist_id")
     .eq("artist_id", artistId);
   if (DBError) {
     return {
@@ -110,7 +122,7 @@ export const getCoverImages = async (artistId: string) => {
   };
 };
 
-export const getAlbumImages = async (albumId: string) => {
+export const getAlbumImages = async (albumId: string, artistId: string): Promise<Result<Image[]>> => {
   const supabase = await createClient();
   const { data, error: DBError } = await supabase
     .from("images")
@@ -121,12 +133,17 @@ export const getAlbumImages = async (albumId: string) => {
       error: DBError.message,
     };
   }
+  const dataWithArtistId = data.map((image) => ({
+    ...image,
+    artist_id: artistId,
+  }));
+
   return {
-    data: data,
+    data: dataWithArtistId,
   };
 };
 
-export const getAvailability = async () => {
+export const getAvailability = async (): Promise<Result<DBAvailability[]>> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -162,7 +179,7 @@ export const getAvailability = async () => {
   };
 };
 
-export const getBlockedDates = async () => {
+export const getBlockedDates = async (): Promise<Result<DBBlockedDate[]>> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -178,22 +195,20 @@ export const getBlockedDates = async () => {
   if (role !== "artist") {
     return { error: "User is not an artist" };
   }
+
   const { data, error: DBError } = await supabase
     .from("blocked_date")
-    .select("*")
+    .select("id, date, no_of_artist, start_time, end_time")
     .eq("artist_id", user.id);
   if (DBError) {
     return { error: DBError.message };
-  }
-  if (!data) {
-    return { error: "Something went wrong!!" };
   }
   return {
     data: data,
   };
 };
 
-export const getMaxClients = async () => {
+export const getNoOfArtists = async (): Promise<Result<number>> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -211,17 +226,16 @@ export const getMaxClients = async () => {
   }
   const { data, error: DBError } = await supabase
     .from("artist_profile")
-    .select("max_client")
+    .select("no_of_artists")
     .eq("id", user.id)
-    .maybeSingle();
+    .single();
+
   if (DBError) {
     return { error: DBError.message };
   }
-  if (!data) {
-    return { error: "Something went wrong!!" };
-  }
+
   return {
-    data: data.max_client,
+    data: data.no_of_artists,
   };
 };
 
@@ -253,7 +267,7 @@ export const getBlockedDate = async () => {
   };
 };
 
-export const getArtistServices = async (artistId: string) => {
+export const getArtistServices = async (artistId: string): Promise<Result<Service[]>> => {
   const supabase = await createClient();
   const { data, error: DBError } = await supabase
     .from("services")
@@ -280,52 +294,38 @@ export const getArtistProfile = async (
   error?: string;
   data?: ArtistProfile;
 }> => {
-  const supabase = await createClient();
-  const { profile, error: profileError } = await getProfile(artistId, "artist");
-  if (profileError) {
-    return { error: profileError };
+  const result = await getProfile(artistId, "artist");
+  if ('error' in result) {
+    return { error: result.error };
   }
-  if (!profile) {
-    return { error: "Something went wrong!!" };
-  }
-  if (!profile.professional) {
+  if (!result.data.professional) {
     return notFound();
   }
-  const { data: coverImages, error: coverImagesError } = await getCoverImages(
+  const coverImagesResult = await getCoverImages(
     artistId
   );
-  if (coverImagesError) {
-    return { error: coverImagesError };
+  if ('error' in coverImagesResult) {
+    return { error: coverImagesResult.error };
   }
-  if (!coverImages) {
-    return { error: "No cover images found" };
-  }
-  const { data: services, error: servicesError } = await getArtistServices(
+  const coverImages = coverImagesResult.data;
+  
+  const servicesResult = await getArtistServices(
     artistId
   );
-  if (servicesError) {
-    return { error: servicesError };
+  if ('error' in servicesResult) {
+    return { error: servicesResult.error };
   }
-  if (!services) {
-    return { error: "No services found" };
+  const services = servicesResult.data;
+
+  const albumsResult = await getAlbums(artistId);
+  if ('error' in albumsResult) {
+    return { error: albumsResult.error };
   }
-  const { data: albums, error: albumsError } = await getAlbums(artistId);
-  if (albumsError) {
-    return { error: albumsError };
-  }
-  if (!albums) {
-    return { error: "No albums found" };
-  }
-  const albumWithImageCount = albums.map((album) => ({
-    name: album.album_name,
-    image_count: album.image_count,
-    id: album.album_id,
-    cover_image: album.cover_image,
-  }));
+  const albumWithImageCount = albumsResult.data.albums;
   return {
     data: {
-      personal: profile.personal,
-      professional: profile.professional,
+      personal: result.data.personal,
+      professional: result.data.professional,
       cover_images: coverImages,
       services: services,
       albums: albumWithImageCount,
@@ -333,7 +333,7 @@ export const getArtistProfile = async (
   };
 };
 
-export const getBookings = async () => {
+export const getBookings = async () : Promise<Result<BookingInfo[]>> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -374,13 +374,8 @@ export const getBookings = async () => {
     start_time: booking.start_time,
     date: booking.date,
   }));
-  const bookingInfo = z.array(bookingInfoSchema).safeParse(info);
-  if (!bookingInfo.success) {
-    return { error: bookingInfo.error.message };
-  }
-  const bookingInfoData = bookingInfo.data;
 
-  return { data: bookingInfoData };
+  return { data: info };
 };
 
 const options: Intl.DateTimeFormatOptions = {
@@ -397,7 +392,7 @@ const options: Intl.DateTimeFormatOptions = {
 const formatter = new Intl.DateTimeFormat("en-IN", options);
 const dateInIST = formatter.format(new Date());
 
-export const getArtistBookings = async () => {
+export const getArtistBookings = async (): Promise<Result<BookingInfo[]>> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -441,15 +436,11 @@ export const getArtistBookings = async () => {
     start_time: booking.start_time,
     date: booking.date,
   }));
-  const bookingInfo = z.array(bookingInfoSchema).safeParse(info);
-  if (!bookingInfo.success) {
-    return { error: bookingInfo.error.message };
-  }
-  const bookingInfoData = bookingInfo.data;
-  return { data: bookingInfoData };
+
+  return { data: info };
 };
 
-export const getPastBookings = async () => {
+export const getPastBookings = async () : Promise<Result<BookingInfo[]>> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -493,10 +484,25 @@ export const getPastBookings = async () => {
     start_time: booking.start_time,
     date: booking.date,
   }));
-  const bookingInfo = z.array(bookingInfoSchema).safeParse(info);
-  if (!bookingInfo.success) {
-    return { error: bookingInfo.error.message };
-  }
-  const bookingInfoData = bookingInfo.data;
-  return { data: bookingInfoData };
+  return { data: info };
 };
+
+export const getArtists = async () : Promise<Result<Artist[]>> => {
+  const supabase = await createClient();
+  const { data: {user}, error } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!user) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if (role !== "customer") {
+    return { error: "User is not a customer" };
+  }
+  const { data, error: DBError } = await supabase.from("artist_profile").select("id, business_name, address, logo");
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  return { data: data };
+}

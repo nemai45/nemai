@@ -27,6 +27,7 @@ import {
   Clock,
   UserCircle,
   History,
+  Eye,
 } from "lucide-react";
 
 const iconMap = {
@@ -42,6 +43,7 @@ const iconMap = {
   Clock,
   UserCircle,
   History,
+  Eye,
 };
 
 export interface SidebarMenuItemType {

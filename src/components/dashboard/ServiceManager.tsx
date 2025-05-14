@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useUser } from "@/hooks/use-user"
 import { Service, serviceSchema } from "@/lib/type"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Clock, DollarSign, Edit, Plus, Trash } from "lucide-react"
+import { Clock, Edit, Plus, Trash } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { FC, useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -23,16 +23,6 @@ interface ServiceManagerProps {
 const ServiceManager: FC<ServiceManagerProps> = ({ services }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingService, setEditingService] = useState<Service | null>(null)
-  const router = useRouter()
-  const { user, loading } = useUser()
-
-  useEffect(() => {
-    if (loading) return
-    if (!user) {
-      router.push("/login")
-      return
-    }
-  }, [user, router, loading])
 
   const form = useForm<Service>({
     defaultValues: {
@@ -80,7 +70,6 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services }) => {
   }
 
   const onSubmit = async (data: Service) => {
-    console.log(data)
     if (!editingService) {
       const { error } = await addArtistService(data)
       if (error) {

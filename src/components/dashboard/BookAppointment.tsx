@@ -13,6 +13,7 @@ import { useParams, useRouter } from "next/navigation"
 import { useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
+import { timeToMinutes } from "@/lib/utils"
 
 interface BookAppointmentProps {
   bookedService: BookedService
@@ -30,25 +31,18 @@ const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, i) => {
   return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`
 })
 
-function timeToMinutes(time: string) {
-  const [hours, minutes] = time.split(':').map(Number);
-  return hours * 60 + minutes;
-}
-
-
 const getSelectedDayOfWeek = (selectedDate: Date) => {
   if (!selectedDate) return -1;
   const day = selectedDate.getDay();
   return day === 0 ? 6 : day - 1;
 }
 
-
 const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | undefined>(undefined)
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  
+
   const calculateTotal = () => {
     const basePrice = bookedService.service.price
     const add_on_price = bookedService.add_on.reduce((sum, addon) => {
@@ -66,64 +60,96 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
   })
 
   const getStartTimeOptions = useMemo(() => {
+    // Return early if no data or date selected
     if (!slotData || !selectedDate) return [];
+
     const dayOfWeek = getSelectedDayOfWeek(selectedDate);
-    const availableTimeSlots = slotData.availability.filter(slot => slot.day === dayOfWeek);
-    const serviceDuration = bookedService.service.duration
-
-    const allTimeOptions = TIME_OPTIONS.filter(time => {
-      const slot = availableTimeSlots.find(slot =>
-        timeToMinutes(time) >= slot.start_time && timeToMinutes(time) < slot.end_time
-      )
-      if (!slot) return false
-      if (timeToMinutes(time) + serviceDuration > slot.end_time) return false
-      return true
-    });
-
     const formattedDate = format(selectedDate, "yyyy-MM-dd");
+    const serviceDuration = bookedService.service.duration;
+    const availableTimeSlots = slotData.availability.filter(slot => slot.day === dayOfWeek);
+
+    // Pre-process blocked times for this day
     const blockedTimesForDay = slotData.blockedDates.filter(date =>
       date.date === formattedDate
     );
 
-    const timeOptions = allTimeOptions.map(time => {
-      const startTime = timeToMinutes(time)
-      const endTime = startTime + serviceDuration
-      const blocked = blockedTimesForDay.find(date =>
-        startTime < date.end_time && endTime > date.start_time
-      )
-      if (blocked) {
-        return {
-          time,
-          count: slotData.maxClients - blocked.no_of_artist
-        }
-      } else {
-        return {
-          time,
-          count: slotData.maxClients
-        }
+    // Pre-process bookings for this day
+    const bookedSlotsForDay = slotData.bookedSlots.filter(slot =>
+      slot.date === formattedDate
+    );
+
+    // Create a booking map for quick conflict checks
+    // This maps each 15-minute time segment to the number of artists already booked
+    const bookingMap = new Map();
+    bookedSlotsForDay.forEach(slot => {
+      const slotStartMinutes = slot.start_time;
+      const slotEndMinutes = slotStartMinutes + slot.duration;
+
+      // Mark each 15-minute segment in this booking as occupied
+      for (let minute = slotStartMinutes; minute < slotEndMinutes; minute += 15) {
+        bookingMap.set(minute, (bookingMap.get(minute) || 0) + 1);
       }
     });
 
-    const bookedSlots = slotData.bookedSlots.filter(slot => {
-      return slot.date === formattedDate
-    })
+    // Get all possible time slots
+    return TIME_OPTIONS.filter(time => {
+      const startMinutes = timeToMinutes(time);
+      const endMinutes = startMinutes + serviceDuration;
 
-    const finalTimeOptions = timeOptions.filter(option => {
-      const conflictSlots = bookedSlots.filter(slot => {
-        const slotStartTime = slot.start_time
-        const slotEndTime = slotStartTime + slot.duration
-        const serviceStartTime = timeToMinutes(option.time)
-        const serviceEndTime = serviceStartTime + serviceDuration
-        return slotStartTime < serviceEndTime && slotEndTime > serviceStartTime
-      })
-      if (option.count - conflictSlots.length > 0) {
-        return true
+      // Check if this time is within any available slot for this day
+      const slot = availableTimeSlots.find(slot =>
+        startMinutes >= slot.start_time &&
+        startMinutes < slot.end_time &&
+        endMinutes <= slot.end_time
+      );
+
+      // If not in any available slot, remove this option
+      if (!slot) return false;
+
+      // Check for blocks that overlap with this service time
+      const block = blockedTimesForDay.find(date =>
+        startMinutes < date.end_time && endMinutes > date.start_time
+      );
+
+      // Calculate base availability
+      let availableArtists = block
+        ? slotData.maxClients - block.no_of_artist
+        : slotData.maxClients;
+
+      // Check for booking conflicts
+      for (let minute = startMinutes; minute < endMinutes; minute += 15) {
+        const bookedArtists = bookingMap.get(minute) || 0;
+        availableArtists = Math.min(availableArtists, slotData.maxClients - bookedArtists);
       }
-      return false
-    })
 
-    return finalTimeOptions;
-  }, [slotData, selectedDate, bookedService]);
+      // Only return times where at least one artist is available
+      return availableArtists > 0;
+    }).map(time => {
+      const startMinutes = timeToMinutes(time);
+      const endMinutes = startMinutes + serviceDuration;
+
+      // Find overlapping blocked dates if any
+      const block = blockedTimesForDay.find(date =>
+        startMinutes < date.end_time && endMinutes > date.start_time
+      );
+
+      // Calculate base availability
+      let availableArtists = block
+        ? slotData.maxClients - block.no_of_artist
+        : slotData.maxClients;
+
+      // Account for bookings
+      for (let minute = startMinutes; minute < endMinutes; minute += 15) {
+        const bookedArtists = bookingMap.get(minute) || 0;
+        availableArtists = Math.min(availableArtists, slotData.maxClients - bookedArtists);
+      }
+
+      return {
+        time,
+        count: availableArtists
+      };
+    });
+  }, [slotData, selectedDate, bookedService.service.duration]);
 
   if (isLoadingSlotData) return <div>Loading...</div>
   if (isErrorSlotData) return <div>Error loading slot data</div>

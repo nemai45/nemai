@@ -9,11 +9,12 @@ import {
   CombinedInfo,
   Service,
 } from "@/lib/type";
+import { timeToMinutes } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-export const onBoardUser = async (data: CombinedInfo) => {
+export const onBoardUser = async (data: CombinedInfo, logo: File | null, point: { lat: number, lng: number } | null) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -46,16 +47,35 @@ export const onBoardUser = async (data: CombinedInfo) => {
     };
   }
   if (role === "artist" && professional) {
-    const { error: DBError } = await supabase.from("artist_profile").insert({
+    if (logo) {
+      const fileName = `${user.id}-${Date.now()}`;
+      const { data, error: DBError } = await supabase.storage
+        .from("logos")
+        .upload(fileName, logo);
+      if (DBError) {
+        return {
+          error: DBError.message,
+        };
+      }
+      professional.logo = data.fullPath;
+    }
+    if (!point) {
+      return {
+        error: "Something went wrong",
+      };
+    }
+    const { error: DBError } = await supabase.rpc('store_artist', {
       business_name: professional.business_name,
       logo: professional.logo,
       bio: professional.bio,
       address: professional.address,
       upi_id: professional.upi_id,
-      location: professional.location || null,
-      max_client: professional.no_of_artists,
+      lat: point.lat,
+      lng: point.lng,
+      no_of_artists: professional.no_of_artists,
       booking_month_limit: professional.booking_month_limit,
-    });
+      location: professional.location
+    })
     if (DBError) {
       return {
         error: DBError.message,
@@ -69,7 +89,7 @@ export const onBoardUser = async (data: CombinedInfo) => {
   };
 };
 
-export const updateUser = async (data: CombinedInfo, logo: File | null) => {
+export const updateUser = async (data: CombinedInfo, logo: File | null, point: { lat: number, lng: number } | null) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -113,6 +133,11 @@ export const updateUser = async (data: CombinedInfo, logo: File | null) => {
       }
       professional.logo = data.fullPath;
     }
+    if (!point) {
+      return {
+        error: "Something went wrong",
+      };
+    }
     const { error: DBError } = await supabase
       .from("artist_profile")
       .update({
@@ -121,7 +146,7 @@ export const updateUser = async (data: CombinedInfo, logo: File | null) => {
         bio: professional.bio,
         address: professional.address,
         upi_id: professional.upi_id,
-        max_client: professional.no_of_artists,
+        no_of_artists: professional.no_of_artists,
         booking_month_limit: professional.booking_month_limit,
         location: professional.location || null,
       })
@@ -226,6 +251,18 @@ export const updateArtistService = async (service: Service) => {
     };
   }
 
+  const { data: serviceData, error: serviceError } = await supabase.from("services").select("artist_id").eq("id", service.id).single();
+  if (serviceError) {
+    return {
+      error: serviceError.message,
+    };
+  }
+  if (serviceData.artist_id !== user.id) {
+    return {
+      error: "You are not authorized to update this service",
+    };
+  }
+
   const { error: DBError } = await supabase
     .from("services")
     .update({
@@ -234,7 +271,7 @@ export const updateArtistService = async (service: Service) => {
       price: service.price,
       duration: service.duration,
     })
-    .eq("id", service.id);
+    .eq("id", service.id)
 
   if (DBError) {
     return {
@@ -259,7 +296,9 @@ export const updateArtistService = async (service: Service) => {
         const { error: DBError } = await supabase
           .from("add_on")
           .delete()
-          .eq("id", addOn.id);
+          .eq("id", addOn.id)
+          .eq("service_id", service.id);
+        
         if (DBError) {
           return {
             error: DBError.message,
@@ -310,6 +349,19 @@ export const deleteArtistService = async (serviceId: string) => {
       error: "User is not an artist",
     };
   }
+
+  const { data: serviceData, error: serviceError } = await supabase.from("services").select("artist_id").eq("id", serviceId).single();
+  if (serviceError) {
+    return {
+      error: serviceError.message,
+    };
+  }
+  if (serviceData.artist_id !== user.id) {
+    return {
+      error: "You are not authorized to delete this service",
+    };
+  }
+
   const { error: DBError } = await supabase
     .from("services")
     .delete()
@@ -399,6 +451,7 @@ export const deleteAlbum = async (albumId: string) => {
     error: null,
   };
 };
+
 export const addCoverImage = async (file: File) => {
   const supabase = await createClient();
   const {
@@ -467,6 +520,19 @@ export const addAlbumImage = async (file: File, albumId: string) => {
       error: "User is not an artist",
     };
   }
+
+  const { data: albumData, error: albumError } = await supabase.from("albums").select("artist_id").eq("id", albumId).single();
+  if (albumError) {
+    return {
+      error: albumError.message,
+    };
+  }
+  if (albumData.artist_id !== user.id) {
+    return {
+      error: "You are not authorized to add images to this album",
+    };
+  }
+
   const fileName = `${user.id}-${Date.now()}`;
   const { data, error: DBError } = await supabase.storage
     .from("images")
@@ -476,6 +542,7 @@ export const addAlbumImage = async (file: File, albumId: string) => {
       error: DBError.message,
     };
   }
+
   const { error: err } = await supabase.from("images").insert({
     url: data.fullPath,
     album_id: albumId,
@@ -485,17 +552,20 @@ export const addAlbumImage = async (file: File, albumId: string) => {
       error: err.message,
     };
   }
+
   const { error: coverImageError } = await supabase
     .from("albums")
     .update({
       cover_image: data.fullPath,
     })
     .eq("id", albumId);
+
   if (coverImageError) {
     return {
       error: coverImageError.message,
     };
   }
+
   revalidatePath(`/artist-dashboard/portfolio/${albumId}`);
   return {
     error: null,
@@ -528,16 +598,31 @@ export const deleteAlbumImage = async (
       error: "User is not an artist",
     };
   }
+
+  const { data: albumData, error: albumError } = await supabase.from("albums").select("artist_id").eq("id", albumId).single();
+  if (albumError) {
+    return {
+      error: albumError.message,
+    };
+  }
+  if (albumData.artist_id !== user.id) {
+    return {
+      error: "You are not authorized to delete images from this album",
+    };
+  }
+
   const { error: DBError } = await supabase
     .from("images")
     .delete()
     .eq("id", imageId)
-    .eq("album.artist_id", user.id);
+    .eq("album_id", albumId);
+
   if (DBError) {
     return {
       error: DBError.message,
     };
   }
+
   const { error: err } = await supabase.storage
     .from("images")
     .remove([fullPath.split("/").pop()!]);
@@ -575,6 +660,19 @@ export const deleteCoverImage = async (imageId: string, fullPath: string) => {
       error: "User is not an artist",
     };
   }
+
+  const { data: coverImageData, error: coverImageError } = await supabase.from("cover_images").select("artist_id").eq("id", imageId).single();
+  if (coverImageError) {
+    return {
+      error: coverImageError.message,
+    };
+  }
+  if (coverImageData.artist_id !== user.id) {
+    return {
+      error: "You are not authorized to delete this cover image",
+    };
+  }
+
   const { error: DBError } = await supabase
     .from("cover_images")
     .delete()
@@ -597,11 +695,6 @@ export const deleteCoverImage = async (imageId: string, fullPath: string) => {
     error: null,
   };
 };
-
-function timeToMinutes(time: string) {
-  const [hours, minutes] = time.split(":").map(Number);
-  return hours * 60 + minutes;
-}
 
 export const addAvailability = async (data: Availability) => {
   const supabase = await createClient();
@@ -668,6 +761,19 @@ export const deleteAvailability = async (id: string) => {
       error: "User is not an artist",
     };
   }
+
+  const { data: availabilityData, error: availabilityError } = await supabase.from("availability").select("artist_id").eq("id", id).single();
+  if (availabilityError) {
+    return {
+      error: availabilityError.message,
+    };
+  }
+  if (availabilityData.artist_id !== user.id) {
+    return {
+      error: "You are not authorized to delete this availability",
+    };
+  }
+
   const { error: DBError } = await supabase
     .from("availability")
     .delete()
@@ -707,10 +813,10 @@ export const addBlockedDate = async (data: BlockedDate) => {
   const { data: newBlockedDate, error: DBError } = await supabase
     .from("blocked_date")
     .insert({
-      date: data.blocked_date,
+      date: data.date,
       start_time: timeToMinutes(data.start_time),
       end_time: timeToMinutes(data.end_time),
-      no_of_artist: data.no_of_artists,
+      no_of_artist: data.no_of_artist,
     })
     .select("id")
     .single();
@@ -747,6 +853,18 @@ export const deleteBlockedDate = async (id: string) => {
       error: "User is not an artist",
     };
   }
+  const { data: blockedDateData, error: blockedDateError } = await supabase.from("blocked_date").select("artist_id").eq("id", id).single();
+  if (blockedDateError) {
+    return {
+      error: blockedDateError.message,
+    };
+  }
+  if (blockedDateData.artist_id !== user.id) {
+    return {
+      error: "You are not authorized to delete this blocked date",
+    };
+  }
+
   const { error: DBError } = await supabase
     .from("blocked_date")
     .delete()
@@ -756,6 +874,7 @@ export const deleteBlockedDate = async (id: string) => {
       error: DBError.message,
     };
   }
+
   return {
     error: null,
   };

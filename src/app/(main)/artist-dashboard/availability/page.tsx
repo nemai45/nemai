@@ -1,40 +1,33 @@
-import AvailabilityManager from '@/components/dashboard/AvailabilityManager'
-import { Availability, BlockedDate, Booking } from '@/lib/type';
-import { getArtistBookings, getAvailability, getBlockedDates, getBookings, getMaxClients } from '@/lib/user'
-import React from 'react'
-
+import AvailabilityManager from '@/components/dashboard/AvailabilityManager';
+import { Availability, BlockedDate } from '@/lib/type';
+import { getArtistBookings, getAvailability, getBlockedDates, getNoOfArtists } from '@/lib/user';
+import { minutesToTime } from '@/lib/utils';
+import Error from '@/components/Error';
 const page = async () => {
-  const { data, error } = await getAvailability();
-  if (error) {
-    return <div>{error}</div>;
+  const result = await getAvailability();
+  if ('error' in result) {
+    return <Error error={result.error} />;
   }
-  if (!data) {
-    return <div>No availability found</div>;
-  }
+  const data = result.data;
 
-  const { data: blockedDatesData, error: blockedDatesError } = await getBlockedDates();
-  if (blockedDatesError) {
-    return <div>{blockedDatesError}</div>;
+  const blockedDatesResult = await getBlockedDates();
+  if ('error' in blockedDatesResult) {
+    return <Error error={blockedDatesResult.error} />;
   }
-  if (!blockedDatesData) {
-    return <div>No blocked dates found</div>;
-  }
+  const blockedDatesData = blockedDatesResult.data;
 
-  const { data: maxClients, error: maxClientsError } = await getMaxClients();
-  if (maxClientsError) {
-    return <div>{maxClientsError}</div>;
+  const noOfArtistsResult = await getNoOfArtists();
+  if ('error' in noOfArtistsResult) {
+    return <Error error={noOfArtistsResult.error} />;
   }
-  if (!maxClients) {
-    return <div>No max clients found</div>;
-  }
+  const noOfArtists = noOfArtistsResult.data;
 
-  const { data: bookingsData, error: bookingsError } = await getArtistBookings();
-  if (bookingsError) {
-    return <div>{bookingsError}</div>;
+  const bookingsResult = await getArtistBookings();
+  if ('error' in bookingsResult) {
+    return <Error error={bookingsResult.error} />;
   }
-  if (!bookingsData) {
-    return <div>No bookings found</div>;
-  }
+  const bookingsData = bookingsResult.data;
+
   const availability: Availability[] = data.map((item) => ({
     id: item.id,
     startTime: minutesToTime(item.start_time),
@@ -42,32 +35,17 @@ const page = async () => {
     dayOfWeek: item.day,
   }))
 
-  function minutesToTime(minutes: number) {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
-  }
-
   const blockedDates: BlockedDate[] = blockedDatesData.map((item) => ({
     id: item.id,
-    blocked_date: item.date,
-    no_of_artists: item.no_of_artist,
+    date: item.date,
+    no_of_artist: item.no_of_artist,
     start_time: minutesToTime(item.start_time),
     end_time: minutesToTime(item.end_time),
   }))
-  const bookings: {
-    service_id: string,
-    start_time: number,
-    date: string,
-    duration: number,
-  }[] = bookingsData.map((item) => ({
-    service_id: item.service.id,
-    start_time: item.start_time,
-    date: item.date,
-    duration: item.service.duration,
-  }))
+
+
   return (
-    <AvailabilityManager bookings={bookings} blockedDates={blockedDates} availability={availability} maxClients={maxClients} />
+    <AvailabilityManager bookings={bookingsData} blockedDates={blockedDates} availability={availability} maxClients={noOfArtists} />
   )
 }
 

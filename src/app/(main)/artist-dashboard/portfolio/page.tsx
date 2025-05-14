@@ -5,40 +5,33 @@ import { getAlbums } from '@/lib/user'
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import React from 'react'
+import Error from '@/components/Error';
 
 const page = async () => {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error) {
-    console.error(error);
+    return <Error error={error.message} />
   }
   if (!user) {
     return redirect("/login");
   }
   const role = await getUserRole();
+  console.log(role);
   if (!role) {
     return redirect("/login");
   }
   if (role !== "artist") {
     return redirect("/login");
   }
-  const { data: albums, error: albumsError, coverImageCount } = await getAlbums(user.id);
-  if (albumsError) {
-    console.error(albumsError);
+  const result = await getAlbums(user.id);
+  if ('error' in result) {
+    return <Error error={result.error} />
   }
-  if (!albums) {
-    return <div>No albums found</div>;
-  } 
-
-  const albumsWithImageCount: AlbumWithImageCount[] = albums.map((album) => ({
-    id: album.album_id,
-    name: album.album_name,
-    image_count: album.image_count,
-    cover_image: album.cover_image,
-  }));
+  console.log(result.data);
 
   return (
-    <PortfolioManager albums={albumsWithImageCount} coverImageCount={coverImageCount} />
+    <PortfolioManager albums={result.data.albums} coverImageCount={result.data.coverImageCount} />
   )
 }
 

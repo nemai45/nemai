@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export type Result<T> = { data: T } | { error: string };
+
 const indianPhonePattern = /^\d{10}$/;
 
 export const personalInfoSchema = z.object({
@@ -69,6 +71,7 @@ export type Album = z.infer<typeof albumSchema>;
 export const albumWithImageCountSchema = albumSchema.extend({
   image_count: z.number().min(0, { message: "Image count must be at least 0" }),
   cover_image: z.string().nullable(),
+  artist_id: z.string(),
 });
 
 export type AlbumWithImageCount = z.infer<typeof albumWithImageCountSchema>;
@@ -76,6 +79,7 @@ export type AlbumWithImageCount = z.infer<typeof albumWithImageCountSchema>;
 export const imageSchema = z.object({
   id: z.string(),
   url: z.string().min(1, { message: "Image URL is required" }),
+  artist_id: z.string(),
 });
 
 export type Image = z.infer<typeof imageSchema>;
@@ -101,13 +105,22 @@ export type DBAvailability = z.infer<typeof DBAvailability>;
 
 export const blockedDateSchema = z.object({
   id: z.string().optional(),
-  blocked_date: z.string(),
-  no_of_artists: z.number(),
+  date: z.string(),
+  no_of_artist: z.number(),
   start_time: z.string(),
   end_time: z.string(),
 })
 
+export const DBBlockedDate = z.object({
+  id: z.string(),
+  date: z.string(),
+  no_of_artist: z.number(),
+  start_time: z.number(),
+  end_time: z.number(),
+})
+
 export type BlockedDate = z.infer<typeof blockedDateSchema>;
+export type DBBlockedDate = z.infer<typeof DBBlockedDate>;
 
 export const artistProfileSchema = z.object({
   personal: personalInfoSchema,
@@ -182,3 +195,12 @@ export const bookingInfoSchema = z.object({
 })
 
 export type BookingInfo = z.infer<typeof bookingInfoSchema>;
+
+export const artistSchema = z.object({
+  id: z.string(),
+  business_name: z.string(),
+  address: z.string(),
+  logo: z.string().nullable(),
+})
+
+export type Artist = z.infer<typeof artistSchema>;

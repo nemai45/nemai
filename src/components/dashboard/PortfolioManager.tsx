@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser } from "@/hooks/use-user";
-import { type PortfolioItem } from "@/lib/mock-data";
 import { Album, albumSchema, AlbumWithImageCount } from "@/lib/type";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ImageIcon, ImagePlus, Plus, Trash } from "lucide-react";
@@ -43,22 +42,30 @@ const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) =>
   const [isAddingAlbum, setIsAddingAlbum] = useState(false);
   const [newAlbumName, setNewAlbumName] = useState("");
   const [isAddingNewAlbum, setIsAddingNewAlbum] = useState(false);
-  const { user } = useUser();
   const router = useRouter();
 
-  const albumsData = [
+  const albumForm = useForm<Omit<Album, "id">>({
+    resolver: zodResolver(albumSchema.omit({ id: true })),
+    defaultValues: {
+      name: "",
+    },
+  });
+
+  const { user } = useUser();
+  if (!user) {
+    router.push("/login");
+    return;
+  }
+
+  const albumsData: AlbumWithImageCount[] = [
     {
       name: "Cover Images",
       id: "cover-images",
-      coverImage: null,
-      imageCount: coverImageCount
+      cover_image: null,
+      image_count: coverImageCount,
+      artist_id: user.id
     },
-    ...albums.map(album => ({
-      id: album.id,
-      name: album.name,
-      coverImage: album.cover_image,
-      imageCount: album.image_count
-    }))
+    ...albums
   ];
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,12 +107,6 @@ const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) =>
     setIsAddingImage(false);
   };
 
-  const handleDeleteItem = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this image from your portfolio?")) return;
-
-
-  };
-
   const handleCreateAlbum = async (data: Omit<Album, "id">) => {
     const { error } = await createAlbum(data.name);
     if (error) {
@@ -120,14 +121,6 @@ const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) =>
   const handleOpenAlbumView = (albumId: string) => {
     router.push(`/album/${albumId}`);
   };
-
-
-  const albumForm = useForm<Omit<Album, "id">>({
-    resolver: zodResolver(albumSchema.omit({ id: true })),
-    defaultValues: {
-      name: "",
-    },
-  });
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
@@ -227,7 +220,7 @@ const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) =>
                         </SelectItem>
                       ))}
                     </SelectContent>
-                  </Select> 
+                  </Select>
                 </div>
               </div>
             )}

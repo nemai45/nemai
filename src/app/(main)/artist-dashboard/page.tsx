@@ -1,13 +1,12 @@
+import Error from "@/components/Error";
 import FilterCalender from "@/components/FilterCalender";
 import { getArtistBookings } from "@/lib/user";
 
 export default async function ArtistDashboardPage() {
-  const { data, error } = await getArtistBookings();
-  if (error) {
-    return <div>{error}</div>;
+  const result = await getArtistBookings();
+  if ('error' in result) {
+    return <Error error={result.error}/>
   }
-  if (!data) {
-    return <div>No bookings found</div>;
-  }
-  return <FilterCalender bookings={data}/>
+
+  return <FilterCalender bookings={result.data}/>
 }
