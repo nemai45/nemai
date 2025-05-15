@@ -62,6 +62,7 @@ const layout = async ({
   ];
 
   const customerMenuItems: SidebarMenuItemType[] = [
+    { title: "Home", path: "/customer-dashboard", icon: "Home" },
     { title: "Bookings", path: "/customer-dashboard/bookings", icon: "Calendar" },
     { title: "Profile", path: "/customer-dashboard/profile", icon: "UserCircle" },
   ]

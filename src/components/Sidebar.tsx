@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Sidebar,
@@ -28,6 +28,7 @@ import {
   UserCircle,
   History,
   Eye,
+  Home
 } from "lucide-react";
 
 const iconMap = {
@@ -44,6 +45,7 @@ const iconMap = {
   UserCircle,
   History,
   Eye,
+  Home
 };
 
 export interface SidebarMenuItemType {
@@ -63,7 +65,7 @@ export function SidebarLayout({
   menuItems,
 }: SidebarLayoutProps) {
   const location = usePathname();
-
+  const router = useRouter();
   const isActive = (itemPath: string) =>
     location === itemPath ;
 
@@ -71,7 +73,7 @@ export function SidebarLayout({
     <Sidebar className="border-r border-purple-100">
       <SidebarContent>
         <div className="flex items-center px-4 py-6">
-          <span className="text-xl font-bold bg-gradient-to-r from-unicorn-purple to-unicorn-pink text-transparent bg-clip-text">
+          <span onClick={() => router.push("/")} className="text-xl font-bold bg-gradient-to-r from-unicorn-purple to-unicorn-pink text-transparent bg-clip-text">
             {title}
           </span>
         </div>

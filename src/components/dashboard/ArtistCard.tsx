@@ -30,7 +30,7 @@ const ArtistCard = ({
           alt={artist.business_name}
           className="object-cover w-full h-full"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent transition-opacity duration-300">
           <div className="absolute bottom-4 left-4 right-4">
             <Link href={`/artist-profile/${artist.id}`}>
               <Button className="w-full unicorn-button">Book Now</Button>
