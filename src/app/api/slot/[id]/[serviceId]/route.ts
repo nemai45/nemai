@@ -27,14 +27,18 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!maxClients) {
     return NextResponse.json({ error: "No max clients found" }, { status: 404 });
   }
-  const { data: bookedSlots, error: bookedSlotsError } = await supabase.from("order").select("id, start_time, date").eq("service_id", serviceId);
+  const { data: bookedSlots, error: bookedSlotsError } = await supabase.from("order").select("id, start_time, date, services(duration)").eq("service_id", serviceId);
   if (bookedSlotsError) {
     return NextResponse.json({ error: bookedSlotsError.message }, { status: 500 });
   }
   if (!bookedSlots) {
     return NextResponse.json({ error: "No booked slots found" }, { status: 404 });
   }
-  const response = slotDataSchema.safeParse({ availability, blockedDates, maxClients: maxClients.no_of_artists, bookingMonthLimit: maxClients.booking_month_limit, bookedSlots });
+  const bookedSlotsWithDuration = bookedSlots.map((slot) => ({
+    ...slot,
+    duration: slot.services.duration,
+  }));
+  const response = slotDataSchema.safeParse({ availability, blockedDates, maxClients: maxClients.no_of_artists, bookingMonthLimit: maxClients.booking_month_limit, bookedSlots: bookedSlotsWithDuration });
   if (!response.success) {
     return NextResponse.json({ error: response.error.message }, { status: 400 });
   }
