@@ -7,12 +7,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { useUser } from "@/hooks/use-user"
 import { Service, serviceSchema } from "@/lib/type"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Clock, Edit, Plus, Trash } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { FC, useEffect, useState } from "react"
+import { FC, useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 

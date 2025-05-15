@@ -17,7 +17,6 @@ const page = async () => {
     return redirect("/login");
   }
   const role = await getUserRole();
-  console.log(role);
   if (!role) {
     return redirect("/login");
   }
@@ -28,7 +27,6 @@ const page = async () => {
   if ('error' in result) {
     return <Error error={result.error} />
   }
-  console.log(result.data);
 
   return (
     <PortfolioManager albums={result.data.albums} coverImageCount={result.data.coverImageCount} />

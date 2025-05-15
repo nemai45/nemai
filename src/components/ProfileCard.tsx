@@ -5,7 +5,7 @@ import { getLocation } from '@/lib/utils';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Separator } from '@radix-ui/react-separator';
 import { Camera } from 'lucide-react';
-import { FC, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import NailLoader from './NailLoader';
@@ -15,6 +15,8 @@ import { Card, CardContent, CardFooter } from './ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
+import { useRouter } from 'next/navigation';
+import Error from './Error';
 
 interface ProfileCardProps {
     personalInfo: PersonalInfo
@@ -23,7 +25,6 @@ interface ProfileCardProps {
 }
 
 const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, handleSubmit }) => {
-    const { role } = useUser()
     const [logo, setLogo] = useState<File | null>(null)
     const [logoUrl, setLogoUrl] = useState<string | null>(null)
     const [loading, setLoading] = useState<boolean>(false)
@@ -35,6 +36,18 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
             professional: professionalInfo
         },
     });
+
+    const { user, loading: isLoad, error, role } = useUser();
+    const router = useRouter();
+
+    useEffect(() => {
+      if (!isLoad && !user) {
+        router.push('/login');
+      }
+    }, [isLoad, user, router]);
+    if (isLoad) return <div>Loading...</div>
+    if (error) return <Error error={error.message} />
+    if (!user) return null;
 
     const onSubmit = async (data: CombinedInfo) => {
         setLoading(true)

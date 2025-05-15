@@ -14,7 +14,11 @@ import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-export const onBoardUser = async (data: CombinedInfo, logo: File | null, point: { lat: number, lng: number } | null) => {
+export const onBoardUser = async (
+  data: CombinedInfo,
+  logo: File | null,
+  point: { lat: number; lng: number } | null
+) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -64,7 +68,7 @@ export const onBoardUser = async (data: CombinedInfo, logo: File | null, point: 
         error: "Something went wrong",
       };
     }
-    const { error: DBError } = await supabase.rpc('store_artist', {
+    const { error: DBError } = await supabase.rpc("store_artist", {
       business_name: professional.business_name,
       logo: professional.logo,
       bio: professional.bio,
@@ -74,8 +78,8 @@ export const onBoardUser = async (data: CombinedInfo, logo: File | null, point: 
       lng: point.lng,
       no_of_artists: professional.no_of_artists,
       booking_month_limit: professional.booking_month_limit,
-      location: professional.location
-    })
+      location: professional.location,
+    });
     if (DBError) {
       return {
         error: DBError.message,
@@ -89,7 +93,11 @@ export const onBoardUser = async (data: CombinedInfo, logo: File | null, point: 
   };
 };
 
-export const updateUser = async (data: CombinedInfo, logo: File | null, point: { lat: number, lng: number } | null) => {
+export const updateUser = async (
+  data: CombinedInfo,
+  logo: File | null,
+  point: { lat: number; lng: number } | null
+) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -251,7 +259,11 @@ export const updateArtistService = async (service: Service) => {
     };
   }
 
-  const { data: serviceData, error: serviceError } = await supabase.from("services").select("artist_id").eq("id", service.id).single();
+  const { data: serviceData, error: serviceError } = await supabase
+    .from("services")
+    .select("artist_id")
+    .eq("id", service.id)
+    .single();
   if (serviceError) {
     return {
       error: serviceError.message,
@@ -271,7 +283,7 @@ export const updateArtistService = async (service: Service) => {
       price: service.price,
       duration: service.duration,
     })
-    .eq("id", service.id)
+    .eq("id", service.id);
 
   if (DBError) {
     return {
@@ -298,7 +310,7 @@ export const updateArtistService = async (service: Service) => {
           .delete()
           .eq("id", addOn.id)
           .eq("service_id", service.id);
-        
+
         if (DBError) {
           return {
             error: DBError.message,
@@ -350,7 +362,11 @@ export const deleteArtistService = async (serviceId: string) => {
     };
   }
 
-  const { data: serviceData, error: serviceError } = await supabase.from("services").select("artist_id").eq("id", serviceId).single();
+  const { data: serviceData, error: serviceError } = await supabase
+    .from("services")
+    .select("artist_id")
+    .eq("id", serviceId)
+    .single();
   if (serviceError) {
     return {
       error: serviceError.message,
@@ -521,7 +537,11 @@ export const addAlbumImage = async (file: File, albumId: string) => {
     };
   }
 
-  const { data: albumData, error: albumError } = await supabase.from("albums").select("artist_id").eq("id", albumId).single();
+  const { data: albumData, error: albumError } = await supabase
+    .from("albums")
+    .select("artist_id")
+    .eq("id", albumId)
+    .single();
   if (albumError) {
     return {
       error: albumError.message,
@@ -599,7 +619,11 @@ export const deleteAlbumImage = async (
     };
   }
 
-  const { data: albumData, error: albumError } = await supabase.from("albums").select("artist_id").eq("id", albumId).single();
+  const { data: albumData, error: albumError } = await supabase
+    .from("albums")
+    .select("artist_id")
+    .eq("id", albumId)
+    .single();
   if (albumError) {
     return {
       error: albumError.message,
@@ -661,7 +685,11 @@ export const deleteCoverImage = async (imageId: string, fullPath: string) => {
     };
   }
 
-  const { data: coverImageData, error: coverImageError } = await supabase.from("cover_images").select("artist_id").eq("id", imageId).single();
+  const { data: coverImageData, error: coverImageError } = await supabase
+    .from("cover_images")
+    .select("artist_id")
+    .eq("id", imageId)
+    .single();
   if (coverImageError) {
     return {
       error: coverImageError.message,
@@ -719,6 +747,39 @@ export const addAvailability = async (data: Availability) => {
     };
   }
 
+  if (timeToMinutes(data.startTime) >= timeToMinutes(data.endTime)) {
+    return {
+      error: "Start time cannot be greater than end time",
+    };
+  }
+
+  if (data.dayOfWeek > 6 || data.dayOfWeek < 0) {
+    return {
+      error: "Invalid day of week",
+    };
+  }
+
+  const { data: existingSlots, error: fetchError } = await supabase
+    .from("availability")
+    .select("*")
+    .eq("artist_id", user.id)
+    .eq("day", data.dayOfWeek)
+    .not("start_time", "gt", timeToMinutes(data.endTime))
+    .not("end_time", "lt", timeToMinutes(data.startTime));
+
+  if (fetchError) {
+    console.log(fetchError)
+    return {
+      error: "Something went wrong",
+    };
+  }
+
+  if (existingSlots.length > 0) {
+    return {
+      error: "This slot conflicts with an existing slot",
+    };
+  }
+
   const { data: newAvailability, error: DBError } = await supabase
     .from("availability")
     .insert({
@@ -728,11 +789,13 @@ export const addAvailability = async (data: Availability) => {
     })
     .select("id")
     .single();
+
   if (DBError) {
     return {
       error: DBError.message,
     };
   }
+
   return {
     error: null,
     data: newAvailability.id,
@@ -762,8 +825,18 @@ export const deleteAvailability = async (id: string) => {
     };
   }
 
-  const { data: availabilityData, error: availabilityError } = await supabase.from("availability").select("artist_id").eq("id", id).single();
+  const { data: availabilityData, error: availabilityError } = await supabase
+    .from("availability")
+    .select("artist_id")
+    .eq("id", id)
+    .single();
+
   if (availabilityError) {
+    if (availabilityError.code === "PGRST116") {
+      return {
+        error: "Availability not found",
+      };
+    }
     return {
       error: availabilityError.message,
     };
@@ -810,6 +883,118 @@ export const addBlockedDate = async (data: BlockedDate) => {
       error: "User is not an artist",
     };
   }
+
+  if (timeToMinutes(data.start_time) >= timeToMinutes(data.end_time)) {
+    return {
+      error: "Start time cannot be greater than end time",
+    };
+  }
+
+  if (data.no_of_artist < 1) {
+    return {
+      error: "Number of artists cannot be less than 1",
+    };
+  }
+
+  const date = new Date(data.date);
+  const day = date.getDay() === 0 ? 6 : date.getDay() - 1;
+
+  const { data: availabilityData, error: availError } = await supabase
+    .from("availability")
+    .select("*")
+    .eq("artist_id", user.id)
+    .eq("day", day)
+    .lte("start_time", timeToMinutes(data.start_time))
+    .gte("end_time", timeToMinutes(data.end_time));
+
+  if (availError) {
+    return {
+      error: availError.message,
+    };
+  }
+
+  if (availabilityData.length === 0) {
+    return {
+      error: "This slot is not available",
+    };
+  }
+
+  const { data: bookingsData, error: bookingsError } = await supabase
+    .from("order")
+    .select("start_time, services!inner(duration, artist_id)")
+    .eq("date", data.date)
+    .eq("services.artist_id", user.id);
+
+  if (bookingsError) {
+    return {
+      error: bookingsError.message,
+    };
+  }
+
+  const { data: blockedData, error: blockedError } = await supabase
+    .from("blocked_date")
+    .select("*")
+    .eq("artist_id", user.id)
+    .eq("date", data.date)
+    .not("end_time", "lt", timeToMinutes(data.start_time))
+    .not("start_time", "gt", timeToMinutes(data.end_time));
+
+  if (blockedError) {
+    return {
+      error: blockedError.message,
+    };
+  }
+
+  const startTime = timeToMinutes(data.start_time);
+  const endTime = timeToMinutes(data.end_time);
+
+  const { data: no_of_artists, error: no_of_artists_error } = await supabase
+    .from("artist_profile")
+    .select("no_of_artists")
+    .eq("id", user.id)
+    .single();
+
+  if (no_of_artists_error) {
+    return {
+      error: no_of_artists_error.message,
+    };
+  }
+  const timeSlots: Record<number, number> = {};
+
+  for (let minute = startTime; minute < endTime; minute += 15) {
+    timeSlots[minute] = no_of_artists.no_of_artists;
+  }
+
+  for (const booking of bookingsData) {
+    const bookingStartTime = booking.start_time;
+    const bookingEndTime = bookingStartTime + booking.services.duration;
+
+    for (let minute = Math.max(startTime, bookingStartTime); minute < Math.min(endTime, bookingEndTime); minute += 15) {
+      if (timeSlots[minute] && timeSlots[minute] > 0) {
+        timeSlots[minute]--;
+      }
+    }
+  }
+  
+  for(const blocked of blockedData) {
+    const blockedStartTime = blocked.start_time;
+    const blockedEndTime = blocked.end_time;
+
+    for(let minute = Math.max(startTime, blockedStartTime); minute < Math.min(endTime, blockedEndTime); minute += 15) {
+      if (timeSlots[minute] && timeSlots[minute] > 0) {
+        timeSlots[minute]--;
+      }
+    }
+  }
+
+  const availableArtists = Math.min(...Object.values(timeSlots));
+
+  if (availableArtists < data.no_of_artist) {
+    return {
+      error: "Not enough artists available",
+    };
+  }
+
   const { data: newBlockedDate, error: DBError } = await supabase
     .from("blocked_date")
     .insert({
@@ -853,8 +1038,19 @@ export const deleteBlockedDate = async (id: string) => {
       error: "User is not an artist",
     };
   }
-  const { data: blockedDateData, error: blockedDateError } = await supabase.from("blocked_date").select("artist_id").eq("id", id).single();
+
+  const { data: blockedDateData, error: blockedDateError } = await supabase
+    .from("blocked_date")
+    .select("artist_id")
+    .eq("id", id)
+    .single();
+
   if (blockedDateError) {
+    if (blockedDateError.code === "PGRST116") {
+      return {
+        error: "Blocked date not found",
+      };
+    }
     return {
       error: blockedDateError.message,
     };
@@ -869,6 +1065,7 @@ export const deleteBlockedDate = async (id: string) => {
     .from("blocked_date")
     .delete()
     .eq("id", id);
+
   if (DBError) {
     return {
       error: DBError.message,
@@ -902,6 +1099,124 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
       error: "User is not a customer",
     };
   }
+
+  const { data: serviceData, error: serviceError } = await supabase
+    .from("services")
+    .select("id, duration, artist_id")
+    .eq("id", booking.service_id)
+    .single();
+
+  if (serviceError) {
+    if (serviceError.code === "PGRST116") {
+      return {
+        error: "Service not found",
+      };
+    }
+    return {
+      error: serviceError.message,
+    }
+  }
+
+  const startTime = booking.start_time;
+  const endTime = startTime + serviceData.duration;
+
+  const date = new Date(booking.date);
+  const day = date.getDay() === 0 ? 6 : date.getDay() - 1;
+
+  const { data: availabilityData, error: availabilityError } = await supabase
+    .from("availability")
+    .select("*")
+    .eq("artist_id", serviceData.artist_id)
+    .eq("day", day) 
+    .lte("start_time", startTime)
+    .gte("end_time", endTime);
+  
+  if (availabilityError) {
+    return {
+      error: availabilityError.message,
+    };
+  }
+  
+  if (availabilityData.length === 0) {
+    return {
+      error: "This slot is not available",
+    };
+  }
+
+  const { data: blockedDateData, error: blockedDateError } = await supabase
+    .from("blocked_date")
+    .select("*")
+    .eq("artist_id", user.id)
+    .eq("date", booking.date)
+    .not("end_time", "lt", startTime)
+    .not("start_time", "gt", endTime);
+  
+  if (blockedDateError) {
+    return {
+      error: blockedDateError.message,
+    };
+  }
+
+  const { data: bookingsData, error: bookingsError } = await supabase
+    .from("order")
+    .select("start_time, services!inner(duration, artist_id)")
+    .eq("date", booking.date)
+    .eq("services.artist_id", serviceData.artist_id);
+
+  if (bookingsError) {
+    return {
+      error: bookingsError.message,
+    };
+  }
+
+  const { data: no_of_artists, error: no_of_artists_error } = await supabase
+    .from("artist_profile")
+    .select("no_of_artists")
+    .eq("id", serviceData.artist_id)
+    .single();
+
+  if (no_of_artists_error) {
+    return {
+      error: no_of_artists_error.message,
+    };
+  }
+
+  const timeSlots: Record<number, number> = {};
+
+  for (let minute = startTime; minute < endTime; minute += 15) {
+    timeSlots[minute] = no_of_artists.no_of_artists;
+  }
+
+  for (const booking of bookingsData) {
+    const bookingStartTime = booking.start_time;
+    const bookingEndTime = bookingStartTime + booking.services.duration;
+
+    for (let minute = Math.max(startTime, bookingStartTime); minute < Math.min(endTime, bookingEndTime); minute += 15) {
+      if (timeSlots[minute] && timeSlots[minute] > 0) {
+        timeSlots[minute]--;
+      }
+    }
+  }
+
+  for (const blocked of blockedDateData) {
+    const blockedStartTime = blocked.start_time;
+    const blockedEndTime = blocked.end_time;
+
+    for (let minute = Math.max(startTime, blockedStartTime); minute < Math.min(endTime, blockedEndTime); minute += 15) {
+      if (timeSlots[minute] && timeSlots[minute] > 0) {
+        timeSlots[minute]--;
+      }
+    }
+  }
+
+  const availableArtists = Math.min(...Object.values(timeSlots));
+
+  if (availableArtists < 1) {
+    return {
+      error: "This slot is not available",
+    };
+  }
+  
   const { data: newOrder, error: DBError } = await supabase
     .from("order")
     .insert({

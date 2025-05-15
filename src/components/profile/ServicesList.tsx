@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,8 @@ import { Clock, DollarSign } from 'lucide-react';
 import { BookedService, Service } from '@/lib/type';
 import AddOnDrawer from '../AddOnDrawer';
 import { useUser } from '@/hooks/use-user';
+import { useRouter } from 'next/navigation';
+import Error from '../Error';
 
 interface ServicesListProps {
   services: Service[];
@@ -19,7 +21,18 @@ interface ServicesListProps {
 }
 
 const ServicesList = ({ services, isDrawerOpen, setIsDrawerOpen, isBooked, setIsBooked, bookedService, setBookedService }: ServicesListProps) => {
-  const { role } = useUser();
+  const { user, loading, error, role } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [loading, user, router]);
+  if (loading) return <div>Loading...</div>
+  if (error) return <Error error={error.message} />
+  if (!user) return null;
+
   if (!services || services.length === 0) {
     return (
       <div className="text-center py-10">
@@ -57,19 +70,24 @@ const ServicesList = ({ services, isDrawerOpen, setIsDrawerOpen, isBooked, setIs
                 setBookedService({
                   service: service,
                   add_on: service.add_on.map((addon) => ({
-                  ...addon,
-                  count: 0
-                }))
-              })
-              setIsDrawerOpen(true);
-            }}>
-              Book Now
-            </Button>
+                    ...addon,
+                    count: 0
+                  }))
+                })
+                if (bookedService && bookedService.add_on.length > 0) {
+                  setIsDrawerOpen(true)
+                } else {
+                  setIsBooked(true)
+                }
+              }}>
+                Book Now
+              </Button>
             )}
           </CardFooter>
         </Card>
       ))}
-      <AddOnDrawer isBooked={isBooked} setIsBooked={setIsBooked} services={services} isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen} bookedService={bookedService} setBookedService={setBookedService} />
+      {bookedService && bookedService.add_on.length > 0 &&
+        <AddOnDrawer isBooked={isBooked} setIsBooked={setIsBooked} services={services} isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen} bookedService={bookedService} setBookedService={setBookedService} />}
     </div>
   );
 };

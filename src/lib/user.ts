@@ -1,15 +1,11 @@
 import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
-import { z } from "zod";
 import { getUserRole } from "./get-user-role";
 import {
   AlbumWithImageCount,
   Artist,
   ArtistProfile,
-  Availability,
-  BlockedDate,
   BookingInfo,
-  bookingInfoSchema,
   CombinedInfo,
   DBAvailability,
   DBBlockedDate,
@@ -354,7 +350,9 @@ export const getBookings = async () : Promise<Result<BookingInfo[]>> => {
     .select(
       "id, services(id, artist_profile(business_name), name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count)"
     )
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .order("date");
+
   if (DBError) {
     return { error: DBError.message };
   }
@@ -413,10 +411,11 @@ export const getArtistBookings = async (): Promise<Result<BookingInfo[]>> => {
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, users(first_name, last_name),services(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count)"
+      "id, users(first_name, last_name),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count)"
     )
     .eq("services.artist_id", user.id)
-    .gte("date", formattedDate);
+    .gte("date", formattedDate)
+    .order("date");
   if (DBError) {
     return { error: DBError.message };
   }
@@ -436,7 +435,6 @@ export const getArtistBookings = async (): Promise<Result<BookingInfo[]>> => {
     start_time: booking.start_time,
     date: booking.date,
   }));
-
   return { data: info };
 };
 
@@ -461,7 +459,7 @@ export const getPastBookings = async () : Promise<Result<BookingInfo[]>> => {
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, users(first_name, last_name),services(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count)"
+      "id, users(first_name, last_name),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count)"
     )
     .eq("services.artist_id", user.id)
     .lt("date", formattedDate);

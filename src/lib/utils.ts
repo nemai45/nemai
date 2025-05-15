@@ -10,7 +10,6 @@ export const getLocation = async (address: string) => {
   const url = `https://api.opencagedata.com/geocode/v1/json`;
 
   try {
-    console.log(process.env.NEXT_PUBLIC_OPENCAGE_API_KEY)
     const response = await axios.get(url, {
       params: {
         key: process.env.NEXT_PUBLIC_OPENCAGE_API_KEY,

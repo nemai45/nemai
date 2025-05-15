@@ -18,7 +18,6 @@ interface ArtistProfileProps {
 
 const ArtistProfile = ({ artistProfile }: ArtistProfileProps) => {
   const router = useRouter()
-  const { role } = useUser();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isBooked, setIsBooked] = useState(false)
   const [bookedService, setBookedService] = useState<BookedService | null>(null)

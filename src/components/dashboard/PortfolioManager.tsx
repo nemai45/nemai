@@ -18,12 +18,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ImageIcon, ImagePlus, Plus, Trash } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import AlbumGrid from "../AlbumGrid";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
-
+import Error from "../Error";
 interface PortfolioManagerProps {
   albums: AlbumWithImageCount[];
   coverImageCount: number;
@@ -51,11 +51,16 @@ const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) =>
     },
   });
 
-  const { user } = useUser();
-  if (!user) {
-    router.push("/login");
-    return;
-  }
+  const { user, loading, error } = useUser();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [loading, user, router]);
+  if (loading) return <div>Loading...</div>
+  if (error) return <Error error={error.message} />
+  if (!user) return null;
 
   const albumsData: AlbumWithImageCount[] = [
     {

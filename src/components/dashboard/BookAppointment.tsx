@@ -6,14 +6,16 @@ import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { addOnBookingSchema, BookedService, bookingSchema, Service, SlotData } from "@/lib/type"
+import { timeToMinutes } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import axios, { AxiosError } from "axios"
 import { format } from "date-fns"
 import { useParams, useRouter } from "next/navigation"
 import { useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
+import Error from "../Error"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
-import { timeToMinutes } from "@/lib/utils"
+import { date } from "zod"
 
 interface BookAppointmentProps {
   bookedService: BookedService
@@ -40,6 +42,7 @@ const getSelectedDayOfWeek = (selectedDate: Date) => {
 const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | undefined>(undefined)
+  const [loading, setLoading] = useState(false)
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
 
@@ -62,6 +65,7 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
   const getStartTimeOptions = useMemo(() => {
     // Return early if no data or date selected
     if (!slotData || !selectedDate) return [];
+
 
     const dayOfWeek = getSelectedDayOfWeek(selectedDate);
     const formattedDate = format(selectedDate, "yyyy-MM-dd");
@@ -152,20 +156,23 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
   }, [slotData, selectedDate, bookedService.service.duration]);
 
   if (isLoadingSlotData) return <div>Loading...</div>
-  if (isErrorSlotData) return <div>Error loading slot data</div>
-  if (!slotData) return <div>No slot data found</div>
+  if (isErrorSlotData) return <Error />
+  if (!slotData) return <div>No slot data found</div> 
 
   const handleSubmitBooking = async () => {
+    setLoading(true)
     const bookingData = {
       service_id: bookedService.service.id,
       start_time: timeToMinutes(selectedTimeSlot!),
       date: format(selectedDate!, "yyyy-MM-dd")
     }
-    const addOnData = bookedService.add_on.map(addon => ({
+    const filteredAddOn = bookedService.add_on.filter(addon => addon.count > 0)
+
+    const addOnData = filteredAddOn.map(addon => ({
       add_on_id: addon.id,
       count: addon.count
     }))
-
+    
     const booking = bookingSchema.safeParse(bookingData)
     const addOnBooking = addOnBookingSchema.safeParse(addOnData)
 
@@ -188,6 +195,7 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
       toast.success("Booking successful")
       router.push(`/customer-dashboard/bookings`)
     }
+    setLoading(false)
   }
 
   return (
@@ -320,7 +328,7 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
                 <Button
                   className="w-full"
                   onClick={handleSubmitBooking}
-                  disabled={!selectedTimeSlot}
+                  disabled={!selectedTimeSlot || loading}
                 >
                   Book Appointment
                 </Button>
