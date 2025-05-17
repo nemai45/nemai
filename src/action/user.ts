@@ -89,6 +89,7 @@ export const onBoardUser = async (
   }
   redirect("/customer-dashboard");
   return {
+    logo: null,
     error: null,
   };
 };
@@ -130,6 +131,18 @@ export const updateUser = async (
   }
   if (role === "artist" && professional) {
     if (logo) {
+      if (professional.logo) {
+        console.log("Removing old logo", professional.logo.split("/").pop());
+        const { error: DBError } = await supabase.storage
+          .from("logos")
+          .remove([professional.logo.split("/").pop()!]);
+        if (DBError) {
+          return {
+            error: DBError.message,
+          };
+        }
+      }
+
       const fileName = `${user.id}-${Date.now()}`;
       const { data, error: DBError } = await supabase.storage
         .from("logos")
@@ -141,11 +154,7 @@ export const updateUser = async (
       }
       professional.logo = data.fullPath;
     }
-    if (!point) {
-      return {
-        error: "Something went wrong",
-      };
-    }
+
     const { error: DBError } = await supabase
       .from("artist_profile")
       .update({
@@ -166,6 +175,7 @@ export const updateUser = async (
     }
   }
   return {
+    logo: professional?.logo,
     error: null,
   };
 };
@@ -961,7 +971,7 @@ export const addBlockedDate = async (data: BlockedDate) => {
   }
   const timeSlots: Record<number, number> = {};
 
-  for (let minute = startTime; minute < endTime; minute += 15) {
+  for (let minute = startTime; minute < endTime; minute += 30) {
     timeSlots[minute] = no_of_artists.no_of_artists;
   }
 
@@ -969,7 +979,7 @@ export const addBlockedDate = async (data: BlockedDate) => {
     const bookingStartTime = booking.start_time;
     const bookingEndTime = bookingStartTime + booking.services.duration;
 
-    for (let minute = Math.max(startTime, bookingStartTime); minute < Math.min(endTime, bookingEndTime); minute += 15) {
+    for (let minute = Math.max(startTime, bookingStartTime); minute < Math.min(endTime, bookingEndTime); minute += 30) {
       if (timeSlots[minute] && timeSlots[minute] > 0) {
         timeSlots[minute]--;
       }
@@ -980,7 +990,7 @@ export const addBlockedDate = async (data: BlockedDate) => {
     const blockedStartTime = blocked.start_time;
     const blockedEndTime = blocked.end_time;
 
-    for(let minute = Math.max(startTime, blockedStartTime); minute < Math.min(endTime, blockedEndTime); minute += 15) {
+    for(let minute = Math.max(startTime, blockedStartTime); minute < Math.min(endTime, blockedEndTime); minute += 30) {
       if (timeSlots[minute] && timeSlots[minute] > 0) {
         timeSlots[minute]--;
       }
@@ -1183,7 +1193,7 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
 
   const timeSlots: Record<number, number> = {};
 
-  for (let minute = startTime; minute < endTime; minute += 15) {
+  for (let minute = startTime; minute < endTime; minute += 30) {
     timeSlots[minute] = no_of_artists.no_of_artists;
   }
 
@@ -1191,7 +1201,7 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
     const bookingStartTime = booking.start_time;
     const bookingEndTime = bookingStartTime + booking.services.duration;
 
-    for (let minute = Math.max(startTime, bookingStartTime); minute < Math.min(endTime, bookingEndTime); minute += 15) {
+    for (let minute = Math.max(startTime, bookingStartTime); minute < Math.min(endTime, bookingEndTime); minute += 30) {
       if (timeSlots[minute] && timeSlots[minute] > 0) {
         timeSlots[minute]--;
       }
@@ -1202,7 +1212,7 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
     const blockedStartTime = blocked.start_time;
     const blockedEndTime = blocked.end_time;
 
-    for (let minute = Math.max(startTime, blockedStartTime); minute < Math.min(endTime, blockedEndTime); minute += 15) {
+    for (let minute = Math.max(startTime, blockedStartTime); minute < Math.min(endTime, blockedEndTime); minute += 30) {
       if (timeSlots[minute] && timeSlots[minute] > 0) {
         timeSlots[minute]--;
       }

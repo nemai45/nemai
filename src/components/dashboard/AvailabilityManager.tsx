@@ -14,9 +14,9 @@ import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, i) => {
-  const hour = Math.floor(i / 4)
-  const minute = (i % 4) * 15
+const TIME_OPTIONS = Array.from({ length: 24 * 2 }, (_, i) => {
+  const hour = Math.floor(i / 2)
+  const minute = (i % 2) * 30
   return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`
 })
 
@@ -140,7 +140,7 @@ const AvailabilityManager = ({
         const startMinute = booking.start_time;
         const endMinute = booking.start_time + booking.service.duration;
 
-        for (let minute = startMinute; minute < endMinute; minute += 15) {
+        for (let minute = startMinute; minute < endMinute; minute += 30) {
           bookingsMap.set(minute, (bookingsMap.get(minute) || 0) + 1);
         }
       });
@@ -201,7 +201,7 @@ const AvailabilityManager = ({
         const start = Math.max(timeToMinutes(selectedStartTime), timeToMinutes(date.start_time));
         const end = Math.min(timeToMinutes(currentSlot.endTime), timeToMinutes(date.end_time));
 
-        for (let minute = start; minute < end; minute += 15) {
+        for (let minute = start; minute < end; minute += 30) {
           blockMap.set(minute, (blockMap.get(minute) || 0) + date.no_of_artist);
         }
       }
@@ -220,7 +220,7 @@ const AvailabilityManager = ({
         const start = Math.max(ourStart, bookingStart);
         const end = Math.min(ourEnd, bookingEnd);
 
-        for (let minute = start; minute < end; minute += 15) {
+        for (let minute = start; minute < end; minute += 30) {
           bookingMap.set(minute, (bookingMap.get(minute) || 0) + 1);
         }
       }
@@ -235,7 +235,7 @@ const AvailabilityManager = ({
     for (const endTime of possibleEndTimes) {
       let isValid = true;
 
-      for (let minute = timeToMinutes(selectedStartTime); minute < timeToMinutes(endTime); minute += 15) {
+      for (let minute = timeToMinutes(selectedStartTime); minute < timeToMinutes(endTime); minute += 30) {
         const blockedArtists = blockMap.get(minute) || 0;
         const bookedArtists = bookingMap.get(minute) || 0;
 
@@ -273,7 +273,7 @@ const AvailabilityManager = ({
       const overlapEnd = Math.min(endTimeMinutes, blockEndMinutes);
 
       if (overlapStart < overlapEnd) {
-        for (let minute = overlapStart; minute < overlapEnd; minute += 15) {
+        for (let minute = overlapStart; minute < overlapEnd; minute += 30) {
           blockedMinutes.set(minute, (blockedMinutes.get(minute) || 0) + date.no_of_artist);
         }
       }
@@ -290,7 +290,7 @@ const AvailabilityManager = ({
       const overlapEnd = Math.min(endTimeMinutes, bookingEndMinutes);
 
       if (overlapStart < overlapEnd) {
-        for (let minute = overlapStart; minute < overlapEnd; minute += 15) {
+        for (let minute = overlapStart; minute < overlapEnd; minute += 30) {
           bookedMinutes.set(minute, (bookedMinutes.get(minute) || 0) + 1);
         }
       }
@@ -298,7 +298,7 @@ const AvailabilityManager = ({
 
     let minAvailable = maxClients;
 
-    for (let minute = startTimeMinutes; minute < endTimeMinutes; minute += 15) {
+    for (let minute = startTimeMinutes; minute < endTimeMinutes; minute += 30) {
       const blockedArtists = blockedMinutes.get(minute) || 0;
       const bookedArtists = bookedMinutes.get(minute) || 0;
       const available = maxClients - blockedArtists - bookedArtists;

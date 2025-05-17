@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Artist } from "@/lib/type"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MapPin } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -10,9 +11,9 @@ interface ArtistCardProps {
   artist: Artist
 }
 
-const ArtistCard = ({
-  artist,
-}: ArtistCardProps) => {
+const SUPABASE_BUCKET_URL_PREFIX = "https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/"
+
+const ArtistCard = ({ artist }: ArtistCardProps) => {
   const router = useRouter()
 
   const viewArtistProfile = () => {
@@ -22,39 +23,36 @@ const ArtistCard = ({
   return (
     <Card
       key={artist.id}
-      className="unicorn-card overflow-hidden group hover:scale-[1.02] transition-transform duration-300"
+      className="unicorn-card overflow-hidden group hover:scale-[1.02] transition-transform duration-300 rounded-lg shadow-lg"
     >
-      <div className="relative aspect-square">
-        <img
-          src={artist.logo || "/hero.jpg"}
-          alt={artist.business_name}
-          className="object-cover w-full h-full"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent transition-opacity duration-300">
-          <div className="absolute bottom-4 left-4 right-4">
-            <Link href={`/artist-profile/${artist.id}`}>
-              <Button className="w-full unicorn-button">Book Now</Button>
-            </Link>
-          </div>
-        </div>
-      </div>
+      {/* Card Content */}
       <CardContent className="p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-full overflow-hidden">
-            <img
-              src={artist.logo || "/hero.jpg"}
-              alt={`${artist.business_name} profile`}
-              className="object-cover w-full h-full"
+        <div className="flex flex-col items-center gap-3 mb-3">
+          {/* Logo - Circular Image with larger size */}
+          <Avatar className="w-40 h-40">
+            <AvatarImage 
+              className="w-full h-full rounded-full object-cover" 
+              src={artist.logo ? `${SUPABASE_BUCKET_URL_PREFIX}${artist.logo}` : "/hero.jpg"} 
             />
-          </div>
-          <div>
-            <h3 className="font-semibold text-lg">{artist.business_name}</h3>
-          </div>
+            <AvatarFallback className="flex items-center justify-center bg-gray-200 text-lg font-semibold text-white">
+              {artist.business_name.slice(0, 2)} {/* Fallback initials */}
+            </AvatarFallback>
+          </Avatar>
+
+          {/* Artist Name */}
+          <h3 className="font-semibold text-lg text-center">{artist.business_name}</h3>
         </div>
-        <div className="flex items-center text-muted-foreground text-sm mt-2">
-          <MapPin className="w-4 h-4 mr-1" />
+
+        {/* Location Info */}
+        <div className="flex items-center text-muted-foreground text-sm mt-2 justify-center gap-2">
+          <MapPin className="w-4 h-4" />
           <span>{artist.address}</span>
         </div>
+
+        {/* Booking Button */}
+        <Link href={`/artist-profile/${artist.id}`}>
+          <Button className="w-full mt-4 unicorn-button">Book Now</Button>
+        </Link>
       </CardContent>
     </Card>
   )

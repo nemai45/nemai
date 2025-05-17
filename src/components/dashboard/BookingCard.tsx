@@ -41,6 +41,9 @@ export function BookingCard({ booking }: BookingCardProps) {
             <div className="flex items-center gap-1 mt-1">
               <User className="h-3.5 w-3.5 text-primary" />
               <span className="text-sm font-medium">{booking.name}</span>
+              {booking.phone_no && (
+                <span className="text-sm font-medium">{booking.phone_no}</span>
+              )}
             </div>
           </div>
           <Badge

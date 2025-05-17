@@ -1,7 +1,7 @@
 'use client'
 import { BookingInfo } from '@/lib/type';
 import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, CalendarX } from 'lucide-react';
 import { useState } from 'react';
 import BookingList from './dashboard/BookingsList';
 import { Button } from './ui/button';
@@ -35,7 +35,17 @@ const FilterCalender = ({ bookings }: FilterCalenderProps) => {
                                 <CollapsibleTrigger asChild>
                                     <Button variant="outline" className="w-full justify-between">
                                         <span>Filter by Date</span>
-                                        <CalendarIcon className="ml-auto h-4 w-4" />
+                                        {selectedDate && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={clearDateFilter}
+                                                className="flex items-center gap-1"
+                                            >
+                                                <CalendarX className="h-4 w-4" />
+                                                <span>Clear</span>
+                                            </Button>
+                                        )}
                                     </Button>
                                 </CollapsibleTrigger>
                                 <CollapsibleContent>

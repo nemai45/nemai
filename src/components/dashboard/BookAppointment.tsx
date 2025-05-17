@@ -27,9 +27,9 @@ const getSlotData = async (id: string, serviceId: string) => {
   return res.data
 }
 
-const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, i) => {
-  const hour = Math.floor(i / 4)
-  const minute = (i % 4) * 15
+const TIME_OPTIONS = Array.from({ length: 24 * 2 }, (_, i) => {
+  const hour = Math.floor(i / 2)
+  const minute = (i % 2) * 30
   return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`
 })
 
@@ -83,14 +83,14 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
     );
 
     // Create a booking map for quick conflict checks
-    // This maps each 15-minute time segment to the number of artists already booked
+    // This maps each 30-minute time segment to the number of artists already booked
     const bookingMap = new Map();
     bookedSlotsForDay.forEach(slot => {
       const slotStartMinutes = slot.start_time;
       const slotEndMinutes = slotStartMinutes + slot.duration;
 
-      // Mark each 15-minute segment in this booking as occupied
-      for (let minute = slotStartMinutes; minute < slotEndMinutes; minute += 15) {
+      // Mark each 30-minute segment in this booking as occupied
+      for (let minute = slotStartMinutes; minute < slotEndMinutes; minute += 30) {
         bookingMap.set(minute, (bookingMap.get(minute) || 0) + 1);
       }
     });
@@ -121,7 +121,7 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
         : slotData.maxClients;
 
       // Check for booking conflicts
-      for (let minute = startMinutes; minute < endMinutes; minute += 15) {
+      for (let minute = startMinutes; minute < endMinutes; minute += 30) {
         const bookedArtists = bookingMap.get(minute) || 0;
         availableArtists = Math.min(availableArtists, slotData.maxClients - bookedArtists);
       }
@@ -143,7 +143,7 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
         : slotData.maxClients;
 
       // Account for bookings
-      for (let minute = startMinutes; minute < endMinutes; minute += 15) {
+      for (let minute = startMinutes; minute < endMinutes; minute += 30) {
         const bookedArtists = bookingMap.get(minute) || 0;
         availableArtists = Math.min(availableArtists, slotData.maxClients - bookedArtists);
       }
@@ -157,7 +157,7 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
 
   if (isLoadingSlotData) return <div>Loading...</div>
   if (isErrorSlotData) return <Error />
-  if (!slotData) return <div>No slot data found</div> 
+  if (!slotData) return <div>No slot data found</div>
 
   const handleSubmitBooking = async () => {
     setLoading(true)
@@ -172,7 +172,7 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
       add_on_id: addon.id,
       count: addon.count
     }))
-    
+
     const booking = bookingSchema.safeParse(bookingData)
     const addOnBooking = addOnBookingSchema.safeParse(addOnData)
 
@@ -251,23 +251,17 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
 
             <div className="space-y-2">
               <Label>Select a Time</Label>
-              <Select
-                value={selectedTimeSlot}
-                onValueChange={(value) =>
-                  setSelectedTimeSlot(value)
-                }
-              >
-                <SelectTrigger id="start-time">
-                  <SelectValue placeholder="Start time" />
-                </SelectTrigger>
-                <SelectContent>
-                  {getStartTimeOptions.map((option) => (
-                    <SelectItem key={option.time} value={option.time}>
-                      {option.time}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {getStartTimeOptions.map((option) => (
+                <Button
+                  key={option.time}
+                  value={option.time}
+                  onClick={() => setSelectedTimeSlot(option.time)}
+                  className={`py-2 mx-2 px-4 text-sm text-center rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 ${selectedTimeSlot === option.time ? "bg-blue-500 text-white" : ""
+                    }`}
+                >
+                  {option.time}
+                </Button>
+              ))}
             </div>
 
             {/* Location Type */}

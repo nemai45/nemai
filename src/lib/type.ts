@@ -178,6 +178,7 @@ export type AddOnBooking = z.infer<typeof addOnBookingSchema>;
 export const bookingInfoSchema = z.object({
   id: z.string(),
   name: z.string(),
+  phone_no: z.string().nullable(),
   service: z.object({
     id: z.string(),
     name: z.string(),
@@ -204,3 +205,23 @@ export const artistSchema = z.object({
 })
 
 export type Artist = z.infer<typeof artistSchema>;
+
+export const incomeSchema = z.object({
+  currentMonthIncome: z.number(),
+  lastMonthIncome: z.number(),
+  serviceWiseIncome: z.array(z.object({
+    name: z.string(),
+    serviceIncome: z.number(),
+    addOnIncome: z.number(),
+    total: z.number(),
+  })),
+})
+
+export type Income = z.infer<typeof incomeSchema>;
+
+export type MonthlyIncome = {
+  month: string;
+  serviceIncome: number;
+  addOnIncome: number;
+  total: number;
+};

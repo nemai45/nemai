@@ -10,7 +10,8 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
-  SidebarMenuItem
+  SidebarMenuItem,
+  useSidebar
 } from "@/components/ui/sidebar";
 
 
@@ -68,7 +69,7 @@ export function SidebarLayout({
   const router = useRouter();
   const isActive = (itemPath: string) =>
     location === itemPath ;
-
+  const { setOpen, open, openMobile, setOpenMobile, isMobile } = useSidebar();
   return (
     <Sidebar className="border-r border-purple-100">
       <SidebarContent>
@@ -89,6 +90,11 @@ export function SidebarLayout({
                     <SidebarMenuButton asChild>
                       <Link
                         href={item.path}
+                        onClick={() => {
+                          if (isMobile) {
+                            setOpenMobile(!openMobile);
+                          }
+                        }}
                         className={cn(
                           "flex items-center gap-3 px-3 py-2 rounded-md transition-all",
                           isActive(item.path)

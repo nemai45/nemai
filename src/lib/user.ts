@@ -10,16 +10,19 @@ import {
   DBAvailability,
   DBBlockedDate,
   Image,
+  Income,
+  MonthlyIncome,
   personalInfoSchema,
   professionalInfoSchema,
   Result,
-  Service
+  Service,
 } from "./type";
+import { endOfMonth, format, startOfMonth, subMonths } from "date-fns";
 
 export const getProfile = async (
   userId: string,
   role: string
-) : Promise<Result<CombinedInfo>> => {
+): Promise<Result<CombinedInfo>> => {
   const supabase = await createClient();
   const { data: personal, error: personalError } = await supabase
     .from("users")
@@ -39,7 +42,9 @@ export const getProfile = async (
   if (role === "artist") {
     const { data: professional, error: professionalError } = await supabase
       .from("artist_profile")
-      .select("business_name, logo, bio, address, upi_id, no_of_artists, booking_month_limit, location")
+      .select(
+        "business_name, logo, bio, address, upi_id, no_of_artists, booking_month_limit, location"
+      )
       .eq("id", userId)
       .maybeSingle();
     if (professionalError) {
@@ -67,7 +72,11 @@ export const getProfile = async (
   };
 };
 
-export const getAlbums = async (userId: string) : Promise<Result<{albums: AlbumWithImageCount[], coverImageCount: number}>> => {
+export const getAlbums = async (
+  userId: string
+): Promise<
+  Result<{ albums: AlbumWithImageCount[]; coverImageCount: number }>
+> => {
   const supabase = await createClient();
   const { data: albums, error: DBError } = await supabase.rpc(
     "get_albums_with_image_count",
@@ -102,7 +111,9 @@ export const getAlbums = async (userId: string) : Promise<Result<{albums: AlbumW
   };
 };
 
-export const getCoverImages = async (artistId: string): Promise<Result<Image[]>> => {
+export const getCoverImages = async (
+  artistId: string
+): Promise<Result<Image[]>> => {
   const supabase = await createClient();
   const { data, error: DBError } = await supabase
     .from("cover_images")
@@ -118,7 +129,10 @@ export const getCoverImages = async (artistId: string): Promise<Result<Image[]>>
   };
 };
 
-export const getAlbumImages = async (albumId: string, artistId: string): Promise<Result<Image[]>> => {
+export const getAlbumImages = async (
+  albumId: string,
+  artistId: string
+): Promise<Result<Image[]>> => {
   const supabase = await createClient();
   const { data, error: DBError } = await supabase
     .from("images")
@@ -263,7 +277,9 @@ export const getBlockedDate = async () => {
   };
 };
 
-export const getArtistServices = async (artistId: string): Promise<Result<Service[]>> => {
+export const getArtistServices = async (
+  artistId: string
+): Promise<Result<Service[]>> => {
   const supabase = await createClient();
   const { data, error: DBError } = await supabase
     .from("services")
@@ -291,30 +307,26 @@ export const getArtistProfile = async (
   data?: ArtistProfile;
 }> => {
   const result = await getProfile(artistId, "artist");
-  if ('error' in result) {
+  if ("error" in result) {
     return { error: result.error };
   }
   if (!result.data.professional) {
     return notFound();
   }
-  const coverImagesResult = await getCoverImages(
-    artistId
-  );
-  if ('error' in coverImagesResult) {
+  const coverImagesResult = await getCoverImages(artistId);
+  if ("error" in coverImagesResult) {
     return { error: coverImagesResult.error };
   }
   const coverImages = coverImagesResult.data;
-  
-  const servicesResult = await getArtistServices(
-    artistId
-  );
-  if ('error' in servicesResult) {
+
+  const servicesResult = await getArtistServices(artistId);
+  if ("error" in servicesResult) {
     return { error: servicesResult.error };
   }
   const services = servicesResult.data;
 
   const albumsResult = await getAlbums(artistId);
-  if ('error' in albumsResult) {
+  if ("error" in albumsResult) {
     return { error: albumsResult.error };
   }
   const albumWithImageCount = albumsResult.data.albums;
@@ -329,7 +341,7 @@ export const getArtistProfile = async (
   };
 };
 
-export const getBookings = async () : Promise<Result<BookingInfo[]>> => {
+export const getBookings = async (): Promise<Result<BookingInfo[]>> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -363,6 +375,7 @@ export const getBookings = async () : Promise<Result<BookingInfo[]>> => {
     id: booking.id,
     name: booking.services.artist_profile.business_name,
     service: booking.services,
+    phone_no: null,
     add_on: booking.booked_add_on.map((addOn) => ({
       id: addOn.add_on.id,
       name: addOn.add_on.name,
@@ -411,7 +424,7 @@ export const getArtistBookings = async (): Promise<Result<BookingInfo[]>> => {
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, users(first_name, last_name),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count)"
+      "id, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count)"
     )
     .eq("services.artist_id", user.id)
     .gte("date", formattedDate)
@@ -425,6 +438,7 @@ export const getArtistBookings = async (): Promise<Result<BookingInfo[]>> => {
   const info = data.map((booking) => ({
     id: booking.id,
     name: booking.users.first_name + " " + booking.users.last_name,
+    phone_no: booking.users.phone_no,
     service: booking.services,
     add_on: booking.booked_add_on.map((addOn) => ({
       id: addOn.add_on.id,
@@ -438,7 +452,7 @@ export const getArtistBookings = async (): Promise<Result<BookingInfo[]>> => {
   return { data: info };
 };
 
-export const getPastBookings = async () : Promise<Result<BookingInfo[]>> => {
+export const getPastBookings = async (): Promise<Result<BookingInfo[]>> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -459,7 +473,7 @@ export const getPastBookings = async () : Promise<Result<BookingInfo[]>> => {
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, users(first_name, last_name),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count)"
+      "id, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count)"
     )
     .eq("services.artist_id", user.id)
     .lt("date", formattedDate);
@@ -473,6 +487,7 @@ export const getPastBookings = async () : Promise<Result<BookingInfo[]>> => {
     id: booking.id,
     name: booking.users.first_name + " " + booking.users.last_name,
     service: booking.services,
+    phone_no: booking.users.phone_no,
     add_on: booking.booked_add_on.map((addOn) => ({
       id: addOn.add_on.id,
       name: addOn.add_on.name,
@@ -485,9 +500,12 @@ export const getPastBookings = async () : Promise<Result<BookingInfo[]>> => {
   return { data: info };
 };
 
-export const getArtists = async () : Promise<Result<Artist[]>> => {
+export const getArtists = async (): Promise<Result<Artist[]>> => {
   const supabase = await createClient();
-  const { data: {user}, error } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
   if (error) {
     return { error: error.message };
   }
@@ -498,9 +516,130 @@ export const getArtists = async () : Promise<Result<Artist[]>> => {
   if (role !== "customer") {
     return { error: "User is not a customer" };
   }
-  const { data, error: DBError } = await supabase.from("artist_profile").select("id, business_name, address, logo");
+  const { data, error: DBError } = await supabase
+    .from("artist_profile")
+    .select("id, business_name, address, logo");
   if (DBError) {
     return { error: DBError.message };
   }
   return { data: data };
-}
+};
+
+export const getIncome = async (): Promise<Result<Income & { monthlyChart: MonthlyIncome[] }>> => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) return { error: error.message };
+  if (!user) return { error: "User not found" };
+
+  const role = await getUserRole();
+  if (role !== "artist") return { error: "User is not an artist" };
+
+  const now = new Date();
+  const currentMonthStart = startOfMonth(now).toISOString();
+  const currentMonthEnd = endOfMonth(now).toISOString();
+  const lastMonthStart = startOfMonth(subMonths(now, 1)).toISOString();
+  const lastMonthEnd = endOfMonth(subMonths(now, 1)).toISOString();
+  const sixMonthsAgoStart = startOfMonth(subMonths(now, 5)).toISOString();
+
+  // Fetch all orders from last 6 months
+  const { data: allOrders, error: allOrdersError } = await supabase
+    .from("order")
+    .select(
+      "id, date, service_id, services!inner(id, name, price, artist_id), booked_add_on(id, count, add_on(id, name, price))"
+    )
+    .eq("services.artist_id", user.id)
+    .gte("date", sixMonthsAgoStart)
+    .lte("date", currentMonthEnd);
+
+  if (allOrdersError) return { error: allOrdersError.message };
+
+  const groupByMonth: Record<string, { serviceIncome: number; addOnIncome: number; total: number }> = {};
+
+  let currentMonthIncome = 0;
+  let lastMonthIncome = 0;
+  const serviceWiseIncome: Record<string, {
+    name: string;
+    serviceIncome: number;
+    addOnIncome: number;
+    total: number;
+  }> = {};
+
+  for (const order of allOrders) {
+    const orderDate = new Date(order.date);
+    const monthKey = format(orderDate, 'yyyy-MM');
+    const label = format(orderDate, 'MMM yyyy');
+
+    if (!groupByMonth[monthKey]) {
+      groupByMonth[monthKey] = {
+        serviceIncome: 0,
+        addOnIncome: 0,
+        total: 0,
+      };
+    }
+
+    const servicePrice = order.services.price;
+    groupByMonth[monthKey].serviceIncome += servicePrice;
+    groupByMonth[monthKey].total += servicePrice;
+
+    const addOnIncome = order.booked_add_on.reduce((sum, addOn) => {
+      return sum + addOn.add_on.price * addOn.count;
+    }, 0);
+    groupByMonth[monthKey].addOnIncome += addOnIncome;
+    groupByMonth[monthKey].total += addOnIncome;
+
+    // Monthly totals
+    const dateStr = order.date;
+    if (dateStr >= currentMonthStart && dateStr <= currentMonthEnd) {
+      currentMonthIncome += servicePrice + addOnIncome;
+
+      const id = order.services.id;
+      const name = order.services.name;
+      if (!serviceWiseIncome[id]) {
+        serviceWiseIncome[id] = {
+          name,
+          serviceIncome: 0,
+          addOnIncome: 0,
+          total: 0,
+        };
+      }
+      serviceWiseIncome[id].serviceIncome += servicePrice;
+      serviceWiseIncome[id].addOnIncome += addOnIncome;
+      serviceWiseIncome[id].total += servicePrice + addOnIncome;
+    }
+
+    if (dateStr >= lastMonthStart && dateStr <= lastMonthEnd) {
+      lastMonthIncome += servicePrice + addOnIncome;
+    }
+  }
+
+  // Construct monthly chart (last 6 months)
+  const monthlyChart = [...Array(6)].map((_, i) => {
+    const date = subMonths(now, 5 - i);
+    const monthKey = format(date, 'yyyy-MM');
+    const label = format(date, 'MMM yyyy');
+    const monthData = groupByMonth[monthKey] || {
+      serviceIncome: 0,
+      addOnIncome: 0,
+      total: 0,
+    };
+
+    return {
+      month: label,
+      ...monthData,
+    };
+  });
+
+  return {
+    data: {
+      currentMonthIncome,
+      lastMonthIncome,
+      serviceWiseIncome: Object.values(serviceWiseIncome),
+      monthlyChart,
+    },
+  };
+};
+

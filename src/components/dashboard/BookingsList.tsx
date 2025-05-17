@@ -17,6 +17,15 @@ interface BookingListProps {
 }
 
 function BookingList({ bookings }: BookingListProps) {
+  if (bookings.length === 0) {
+    return (
+      <div className="w-full max-w-4xl mx-auto animate-fade-in">
+        <div className="grid grid-cols-1 gap-6 animate-fade-in">
+          <div className="text-center text-muted-foreground">No bookings found</div>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="w-full max-w-4xl mx-auto animate-fade-in">
       <div className="grid grid-cols-1 gap-6 animate-fade-in">

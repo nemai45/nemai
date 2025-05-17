@@ -1,8 +1,13 @@
+import { getUserRole } from "@/lib/get-user-role"
+import { createClient } from "@/utils/supabase/server"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Search } from "lucide-react"
 
-const HeroSection = () => {
+const HeroSection = async () => {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const role = await getUserRole()
+
   return (
     <section className="relative py-20 overflow-hidden">
       {/* Background Elements */}
@@ -32,21 +37,9 @@ const HeroSection = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/auth" className="unicorn-button inline-flex items-center justify-center">
+              <Link href={`${role === "customer" ? "/customer-dashboard/" : (role === "artist" ? "/artist-dashboard/" : "/login")}`} className="unicorn-button inline-flex items-center justify-center">
                 Book a Nail Artist
               </Link>
-            </div>
-
-            <div className="relative mt-6 max-w-md">
-              <div className="flex items-center bg-white rounded-full p-1 pl-5 shadow-md border border-unicorn-purple/20">
-                <Search className="w-5 h-5 text-muted-foreground mr-2" />
-                <input
-                  type="text"
-                  placeholder="Search for nail artists near you..."
-                  className="bg-transparent flex-1 outline-none py-2 text-foreground"
-                />
-                <Button className="rounded-full bg-primary hover:bg-primary/90">Search</Button>
-              </div>
             </div>
           </div>
 

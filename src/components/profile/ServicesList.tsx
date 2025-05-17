@@ -74,7 +74,7 @@ const ServicesList = ({ services, isDrawerOpen, setIsDrawerOpen, isBooked, setIs
                     count: 0
                   }))
                 })
-                if (bookedService && bookedService.add_on.length > 0) {
+                if (service.add_on.length > 0) {
                   setIsDrawerOpen(true)
                 } else {
                   setIsBooked(true)

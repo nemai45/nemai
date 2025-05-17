@@ -5,6 +5,7 @@ import Testimonials from "@/components/landing/Testimonials"
 import CallToAction from "@/components/landing/CallToAction"
 
 export default function Home() {
+  
   return (
     <>
       <HeroSection />
