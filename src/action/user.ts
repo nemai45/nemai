@@ -70,15 +70,15 @@ export const onBoardUser = async (
     }
     const { error: DBError } = await supabase.rpc("store_artist", {
       business_name: professional.business_name,
-      logo: professional.logo,
-      bio: professional.bio,
+      logo: professional.logo || null,
+      bio: professional.bio || null,
       address: professional.address,
       upi_id: professional.upi_id,
       lat: point.lat,
       lng: point.lng,
       no_of_artists: professional.no_of_artists,
       booking_month_limit: professional.booking_month_limit,
-      location: professional.location,
+      location: professional.location || null,
     });
     if (DBError) {
       return {
