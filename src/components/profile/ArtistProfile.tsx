@@ -6,12 +6,15 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { useUser } from "@/hooks/use-user"
 import { ArtistProfile as ArtistProfileType, BookedService } from "@/lib/type"
 import Autoplay from 'embla-carousel-autoplay'
-import { MapPin, Milestone } from "lucide-react"
+import { Map, MapPin, MapPinned, Milestone } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import AlbumGrid from "../AlbumGrid"
 import BookAppointment from "../dashboard/BookAppointment"
 import ServicesList from "./ServicesList"
+import NailLoader from "../NailLoader"
+import Image from "next/image"
+
 interface ArtistProfileProps {
   artistProfile: ArtistProfileType
 }
@@ -35,11 +38,13 @@ const ArtistProfile = ({ artistProfile }: ArtistProfileProps) => {
             <CarouselContent>
               {artistProfile.cover_images.map((item) => (
                 <CarouselItem key={item.id}>
-                  <div className="relative h-48 md:h-64 lg:h-80 w-full rounded-xl overflow-hidden">
-                    <img
+                  <div className="relative aspect-[2.5/1] rounded-xl overflow-hidden">
+                    <Image
                       src={`https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${item.url}` || "/placeholder.svg"}
                       alt={"Cover image"}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full"
+                      width={100}
+                      height={100}
                     />
                   </div>
                 </CarouselItem>
@@ -66,12 +71,14 @@ const ArtistProfile = ({ artistProfile }: ArtistProfileProps) => {
 
                 <div className="flex flex-wrap items-center gap-2 mb-4">
                   {artistProfile.professional.address && (
-                    <div className="flex items-center text-muted-foreground">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      <span>{artistProfile.professional.address}</span>
+                    <div className="flex items-center justify-between w-full text-muted-foreground">
+                      <div className="flex items-center">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        <span>{artistProfile.professional.address}</span>
+                      </div>
                       {artistProfile.professional.location && (
                         <a href={artistProfile.professional.location} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-600">
-                          <Milestone className="h-4 w-4 ml-1" />
+                          <MapPinned className="h-8 w-8 ml-1" />
                         </a>
                       )}
                     </div>
@@ -107,11 +114,11 @@ const ArtistProfile = ({ artistProfile }: ArtistProfileProps) => {
           <CardContent>
             <AlbumGrid albums={artistProfile.albums} onAlbumClick={(albumId) => {
               router.push(`/album/${albumId}`)
-            }} isDeletable={false} />
+            }} isDeletable={false} logo={artistProfile.professional.logo} />
           </CardContent>
         </Card>
       </div>}
-      {isBooked && bookedService && <BookAppointment bookedService={bookedService} services={artistProfile.services} />}
+      {isBooked && bookedService && <BookAppointment profile={artistProfile} bookedService={bookedService} services={artistProfile.services} />}
     </>
   )
 }

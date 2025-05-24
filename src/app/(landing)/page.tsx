@@ -11,7 +11,7 @@ export default function Home() {
       <HeroSection />
       <FeaturedArtists />
       <HowItWorks />
-      <Testimonials />
+      {/* <Testimonials /> */}
       <CallToAction />
     </>
   )

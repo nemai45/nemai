@@ -29,7 +29,8 @@ import {
   UserCircle,
   History,
   Eye,
-  Home
+  Home,
+  Search
 } from "lucide-react";
 
 const iconMap = {
@@ -46,7 +47,8 @@ const iconMap = {
   UserCircle,
   History,
   Eye,
-  Home
+  Home,
+  Search
 };
 
 export interface SidebarMenuItemType {
@@ -62,7 +64,7 @@ export interface SidebarLayoutProps {
 }
 
 export function SidebarLayout({
-  title = "Nemai",
+  title = "Némai",
   menuItems,
 }: SidebarLayoutProps) {
   const location = usePathname();

@@ -13,6 +13,7 @@ import { Clock, Edit, Plus, Trash } from "lucide-react"
 import { FC, useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
+import NailLoader from "../NailLoader"
 
 interface ServiceManagerProps {
   services: Service[]
@@ -21,6 +22,7 @@ interface ServiceManagerProps {
 const ServiceManager: FC<ServiceManagerProps> = ({ services }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingService, setEditingService] = useState<Service | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   const form = useForm<Service>({
     defaultValues: {
@@ -58,20 +60,29 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services }) => {
   }
 
   const handleDeleteService = async (serviceId: string) => {
+    setIsLoading(true)
     if (!confirm("Are you sure you want to delete this service?")) return
     const { error } = await deleteArtistService(serviceId)
     if (error) {
       toast.error("Error deleting service: " + error)
+      setIsLoading(false)
       return
     }
     toast.success("Service deleted successfully.")
+    setIsLoading(false)
   }
 
   const onSubmit = async (data: Service) => {
+    if (data.duration < 30 || data.duration % 30 !== 0) {
+      toast.error("Duration must be a multiple of 30.")
+      return
+    }
     if (!editingService) {
+      setIsLoading(true)
       const { error } = await addArtistService(data)
       if (error) {
         toast.error("Error adding service: " + error)
+        setIsLoading(false)
         return
       }
       toast.success("Service added successfully.")
@@ -83,18 +94,22 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services }) => {
         duration: 0,
         add_on: [],
       })
+      setIsLoading(false)
     } else {
+      setIsLoading(true)
       const { error } = await updateArtistService({
         ...data,
         id: editingService.id,
       })
       if (error) {
         toast.error("Error updating service: " + error)
+        setIsLoading(false)
         return
       }
       toast.success("Service updated successfully.")
       setIsDialogOpen(false)
     }
+    setIsLoading(false)
   }
 
   const addAddOn = () => {
@@ -125,6 +140,8 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services }) => {
       filteredAddOns
     )
   }
+
+  if (isLoading) return <NailLoader />
 
   return (
     <div className="space-y-6">
@@ -252,7 +269,8 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services }) => {
                       <FormControl>
                         <Input
                           type="number"
-                          min="1"
+                          min="30"
+                          step="30"
                           placeholder="30"
                           {...field}
                           onChange={(e) => field.onChange(parseInt(e.target.value))}

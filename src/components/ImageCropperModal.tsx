@@ -5,18 +5,23 @@ import Cropper, { Area, Point } from 'react-easy-crop';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import getCroppedImg from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface ImageCropperModalProps {
   isOpen: boolean;
   onClose: () => void;
   imageSrc: string | null;
   onCropConfirm: (croppedImageFile: File) => void;
+  cropType?: "logo" | "cover" | "portfolio";
 }
 
-const ImageCropperModal: React.FC<ImageCropperModalProps> = ({ isOpen, onClose, imageSrc, onCropConfirm }) => {
+
+const ImageCropperModal: React.FC<ImageCropperModalProps> = ({ isOpen, onClose, imageSrc, onCropConfirm, cropType = "logo" }) => {
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const aspectRatio = cropType === "cover" ? 2.5 / 1 : 1;
+  const cropShape = cropType === "logo" ? "round" : "rect";
 
   const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixelsResult: Area) => {
     setCroppedAreaPixels(croppedAreaPixelsResult);
@@ -29,13 +34,17 @@ const ImageCropperModal: React.FC<ImageCropperModalProps> = ({ isOpen, onClose, 
     try {
       const croppedImageBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
       if (croppedImageBlob) {
-        const croppedFile = new File([croppedImageBlob], "cropped_logo.png", { type: "image/png" });
+        const croppedFile = new File(
+          [croppedImageBlob],
+          `cropped_${cropType || 'image'}.png`,
+          { type: "image/png" }
+        );
         onCropConfirm(croppedFile);
         onClose();
       }
     } catch (e) {
       console.error(e);
-      // Optionally show an error toast to the user
+      toast.error("Failed to crop image");
     }
   };
 
@@ -52,8 +61,8 @@ const ImageCropperModal: React.FC<ImageCropperModalProps> = ({ isOpen, onClose, 
             image={imageSrc}
             crop={crop}
             zoom={zoom}
-            aspect={1}
-            cropShape="round"
+            aspect={aspectRatio}
+            cropShape={cropShape}
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={onCropComplete}

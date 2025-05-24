@@ -9,8 +9,10 @@ import React from 'react';
 
 const layout = async ({
   children,
+  modal,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode,
+  modal: React.ReactNode
 }) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -62,7 +64,8 @@ const layout = async ({
   ];
 
   const customerMenuItems: SidebarMenuItemType[] = [
-    { title: "Home", path: "/customer-dashboard", icon: "Home" },
+    { title: "Home", path: "/", icon: "Home" },
+    { title: "Explore", path: "/customer-dashboard/", icon: "Search" },
     { title: "Bookings", path: "/customer-dashboard/bookings", icon: "Calendar" },
     { title: "Profile", path: "/customer-dashboard/profile", icon: "UserCircle" },
   ]
@@ -77,7 +80,6 @@ const layout = async ({
     menuItems = customerMenuItems
   }
 
-
   return (
     <QueryProvider>
       <SidebarProvider defaultOpen={true}>
@@ -87,6 +89,7 @@ const layout = async ({
             <DashboardHeader />
             <main className="flex-1 p-6 overflow-y-auto bg-purple-50/30">
               {children}
+              {modal}
             </main>
           </div>
         </div>

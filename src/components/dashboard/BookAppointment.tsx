@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { addOnBookingSchema, BookedService, bookingSchema, Service, SlotData } from "@/lib/type"
+import { addOnBookingSchema, ArtistProfile, BookedService, bookingSchema, Service, SlotData } from "@/lib/type"
 import { timeToMinutes } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import axios, { AxiosError } from "axios"
@@ -14,12 +14,14 @@ import { useParams, useRouter } from "next/navigation"
 import { useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import Error from "../Error"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
-import { date } from "zod"
+import { Input } from "../ui/input"
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group"
+import NailLoader from "../NailLoader"
 
 interface BookAppointmentProps {
   bookedService: BookedService
   services: Service[]
+  profile: ArtistProfile
 }
 
 const getSlotData = async (id: string, serviceId: string) => {
@@ -39,10 +41,13 @@ const getSelectedDayOfWeek = (selectedDate: Date) => {
   return day === 0 ? 6 : day - 1;
 }
 
-const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
+
+const BookAppointment = ({ bookedService, services, profile }: BookAppointmentProps) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | undefined>(undefined)
   const [loading, setLoading] = useState(false)
+  const [locationType, setLocationType] = useState<"work_from_home" | "client_home">(profile.professional.is_work_from_home ? "work_from_home" : "client_home")
+  const [address, setAddress] = useState<string | undefined>(undefined)
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
 
@@ -61,6 +66,7 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
     queryKey: ["slotData", id, bookedService.service.id],
     queryFn: () => getSlotData(id, bookedService.service.id!),
   })
+
 
   const getStartTimeOptions = useMemo(() => {
     // Return early if no data or date selected
@@ -155,16 +161,28 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
     });
   }, [slotData, selectedDate, bookedService.service.duration]);
 
-  if (isLoadingSlotData) return <div>Loading...</div>
+  if (isLoadingSlotData) return <NailLoader />
   if (isErrorSlotData) return <Error />
   if (!slotData) return <div>No slot data found</div>
+
+  const unavailableDays = () => {
+    if (!slotData) return []
+    const availableDays = slotData.availability.map(slot => slot.day)
+    const unavailableDays = Array.from({ length: 7 }, (_, i) => {
+      if (availableDays.includes(i)) return undefined
+      return (i + 1) % 7
+    }).filter(day => day !== undefined)
+    return unavailableDays
+  }
 
   const handleSubmitBooking = async () => {
     setLoading(true)
     const bookingData = {
       service_id: bookedService.service.id,
       start_time: timeToMinutes(selectedTimeSlot!),
-      date: format(selectedDate!, "yyyy-MM-dd")
+      date: format(selectedDate!, "yyyy-MM-dd"),
+      location_type: locationType,
+      address: locationType === "client_home" ? address : null
     }
     const filteredAddOn = bookedService.add_on.filter(addon => addon.count > 0)
 
@@ -178,24 +196,34 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
 
     if (!booking.success) {
       toast.error(booking.error.message)
+      setLoading(false)
       return
     }
     if (!addOnBooking.success) {
       toast.error(addOnBooking.error.message)
+      setLoading(false)
       return
     }
     if (!booking.data || !addOnBooking.data) {
       toast.error("Invalid booking data")
+      setLoading(false)
+      return
+    }
+    if (locationType === "client_home" && !address) {
+      toast.error("Address is required")
+      setLoading(false)
       return
     }
     const { error } = await bookService(booking.data, addOnBooking.data)
     if (error) {
       toast.error(error)
+      setLoading(false)
+      return
     } else {
       toast.success("Booking successful")
       router.push(`/customer-dashboard/bookings`)
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
@@ -244,7 +272,7 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
                   selected={selectedDate}
                   onSelect={setSelectedDate}
                   className="rounded-md border"
-                  disabled={[{ before: new Date() }, { after: new Date(new Date().setMonth(new Date().getMonth() + slotData.bookingMonthLimit)) }]}
+                  disabled={[{ before: new Date() }, { after: new Date(new Date().setMonth(new Date().getMonth() + slotData.bookingMonthLimit)) }, { dayOfWeek: unavailableDays() }]}
                 />
               </div>
             </div>
@@ -264,73 +292,45 @@ const BookAppointment = ({ bookedService, services }: BookAppointmentProps) => {
               ))}
             </div>
 
-            {/* Location Type */}
+
             {selectedTimeSlot && (
-              // <>
-              //   <div className="space-y-2">
-              //     <Label>Appointment Location</Label>
-              //     <RadioGroup
-              //       value={locationType}
-              //       onValueChange={(value) => setLocationType(value as "artist_location" | "customer_location")}
-              //     >
-              //       <div className="flex items-center space-x-2">
-              //         <RadioGroupItem value="artist_location" id="artist_location" />
-              //         <Label htmlFor="artist_location">Artist&abpos;s Location</Label>
-              //       </div>
-              //       <div className="flex items-center space-x-2">
-              //         <RadioGroupItem value="customer_location" id="customer_location" />
-              //         <Label htmlFor="customer_location">My Location (Home Service)</Label>
-              //       </div>
-              //     </RadioGroup>
-              //   </div>
-
-              //   {locationType === "customer_location" && (
-              //     <div className="space-y-2">
-              //       <Label htmlFor="address">Your Address</Label>
-              //       <Input
-              //         id="address"
-              //         placeholder="Enter your full address"
-              //         value={address}
-              //         onChange={(e) => setAddress(e.target.value)}
-              //         required={locationType === "customer_location"}
-              //       />
-              //     </div>
-              //   )}
-
-              //   {/* Notes */}
-              //   <div className="space-y-2">
-              //     <Label htmlFor="notes">Additional Notes (Optional)</Label>
-              //     <Textarea
-              //       id="notes"
-              //       placeholder="Any special requests or information"
-              //       value={notes}
-              //       onChange={(e) => setNotes(e.target.value)}
-              //       rows={3}
-              //     />
-              //   </div>
-
-              //   {/* Submit Button */}
-              //   <Button
-              //     className="w-full"
-              //     onClick={handleSubmitBooking}
-              //     disabled={!selectedTimeSlot || (locationType === "customer_location" && !address)}
-              //   >
-              //     Book Appointment
-              //   </Button>
-              // </>
               <>
-                <Button
-                  className="w-full"
-                  onClick={handleSubmitBooking}
-                  disabled={!selectedTimeSlot || loading}
-                >
-                  Book Appointment
-                </Button>
+                <>
+                  {
+                    profile.professional.is_work_from_home && profile.professional.is_available_at_client_home && (
+                      <RadioGroup className="space-y-2" onValueChange={(value) => setLocationType(value as "work_from_home" | "client_home")} value={locationType}>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem style={{ height: "20px", width: "20px" }} value="work_from_home">Artist&apos;s Studio</RadioGroupItem>
+                          <Label>Artist&apos;s Studio</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem style={{ height: "20px", width: "20px" }} value="client_home">Your Home</RadioGroupItem>
+                          <Label>Your Home</Label>
+                        </div>
+                      </RadioGroup>
+                    )
+                  }
+                  {
+                    locationType === "client_home" && (
+                      <div className="space-y-2">
+                        <Label>Enter your address</Label>
+                        <Input type="text" value={address} onChange={(e) => setAddress(e.target.value)} />
+                      </div>
+                    )
+                  }
+                </>
+                <>
+                  <Button
+                    className="w-full"
+                    onClick={handleSubmitBooking}
+                    disabled={!selectedTimeSlot || loading}
+                  >
+                    Book Appointment
+                  </Button>
+                </>
               </>
-
             )}
           </>
-
         </CardContent>
       </Card>
     </div>

@@ -22,15 +22,19 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import AlbumGrid from "../AlbumGrid";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
 import Error from "../Error";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
+import ImageCropperModal from "../ImageCropperModal";
+import NailLoader from "../NailLoader";
+import Image from "next/image";
 interface PortfolioManagerProps {
   albums: AlbumWithImageCount[];
   coverImageCount: number;
+  logo: string | null;
 }
 
 
-const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) => {
+const PortfolioManager = ({ albums, coverImageCount, logo }: PortfolioManagerProps) => {
   const [isAddingImage, setIsAddingImage] = useState(false);
   const [name, setName] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -39,9 +43,14 @@ const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) =>
   const [isUploading, setIsUploading] = useState(false);
   const [isCoverImage, setIsCoverImage] = useState(false);
   const [selectedAlbum, setSelectedAlbum] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [isAddingAlbum, setIsAddingAlbum] = useState(false);
   const [newAlbumName, setNewAlbumName] = useState("");
   const [isAddingNewAlbum, setIsAddingNewAlbum] = useState(false);
+  const [isCropping, setIsCropping] = useState(false);
+  const [croppingImageSrc, setCroppingImageSrc] = useState<string | null>(null);
+  const [croppingType, setCroppingType] = useState<"cover" | "portfolio" | null>(null);
+
   const router = useRouter();
 
   const albumForm = useForm<Omit<Album, "id">>({
@@ -76,9 +85,20 @@ const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) =>
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
+      const previewUrl = URL.createObjectURL(file);
+      setCroppingImageSrc(previewUrl);
+      setCroppingType(isCoverImage ? "cover" : "portfolio");
+      setIsCropping(true);
     }
+  };
+
+
+  const handleCropConfirm = (file: File) => {
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setIsCropping(false);
+    setCroppingImageSrc(null);
+    setCroppingType(null);
   };
 
   const resetForm = () => {
@@ -92,6 +112,10 @@ const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) =>
 
   const uploadImage = async () => {
     if (!selectedFile) return;
+    if (!isCoverImage && !selectedAlbum) {
+      toast.error("Please select an album");
+      return;
+    }
     setIsUploading(true);
     if (isCoverImage) {
       const { error } = await addCoverImage(selectedFile);
@@ -113,12 +137,14 @@ const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) =>
   };
 
   const handleCreateAlbum = async (data: Omit<Album, "id">) => {
+    setIsLoading(true)
     const { error } = await createAlbum(data.name);
     if (error) {
       toast.error(error);
     } else {
       toast.success("Album created successfully!");
     }
+    setIsLoading(false)
     setIsAddingNewAlbum(false);
     setNewAlbumName("");
   };
@@ -126,6 +152,8 @@ const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) =>
   const handleOpenAlbumView = (albumId: string) => {
     router.push(`/album/${albumId}`);
   };
+
+  if (isLoading) return <NailLoader />
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
@@ -145,6 +173,7 @@ const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) =>
         albums={albumsData}
         onAlbumClick={handleOpenAlbumView}
         isDeletable={true}
+        logo={logo}
       />
 
       <Dialog open={isAddingImage} onOpenChange={setIsAddingImage}>
@@ -166,11 +195,13 @@ const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) =>
                 <input id="image-upload" type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
               </div>
             ) : (
-              <div className="relative aspect-square overflow-hidden rounded-md group">
-                <img
+              <div className="relative overflow-hidden rounded-md">
+                <Image
                   src={previewUrl || "/placeholder.svg"}
                   alt="Preview"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full"
+                  width={100}
+                  height={100}
                 />
                 <Button
                   variant="destructive"
@@ -193,7 +224,13 @@ const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) =>
                 <Button
                   type="button"
                   variant={!isCoverImage ? "default" : "outline"}
-                  onClick={() => setIsCoverImage(false)}
+                  onClick={() => {
+                    setIsCoverImage(false)
+                    if (isCoverImage) {
+                      setPreviewUrl(null)
+                      setSelectedFile(null)
+                    }
+                  }}
                   className="flex-1"
                 >
                   Album Image
@@ -201,7 +238,13 @@ const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) =>
                 <Button
                   type="button"
                   variant={isCoverImage ? "default" : "outline"}
-                  onClick={() => setIsCoverImage(true)}
+                  onClick={() => {
+                    setIsCoverImage(true)
+                    if (!isCoverImage) {
+                      setPreviewUrl(null)
+                      setSelectedFile(null)
+                    }
+                  }}
                   className="flex-1"
                 >
                   Cover Image
@@ -300,6 +343,17 @@ const PortfolioManager = ({ albums, coverImageCount }: PortfolioManagerProps) =>
           </Form>
         </DialogContent>
       </Dialog>
+      <ImageCropperModal
+        isOpen={isCropping}
+        onClose={() => {
+          setIsCropping(false);
+          setCroppingImageSrc(null);
+          setCroppingType(null);
+        }}
+        imageSrc={croppingImageSrc}
+        onCropConfirm={handleCropConfirm}
+        cropType={croppingType ?? undefined}
+      />
     </div>
   );
 };

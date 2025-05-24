@@ -5,7 +5,7 @@ const steps = [
     icon: Search,
     title: "Discover Artists",
     description:
-      "Browse through hundreds of talented nail artists and find the perfect match for your style and budget.",
+      "Browse through numbers of talented nail artists and find the perfect match for your style and budget.",
     color: "bg-unicorn-purple",
   },
   {
@@ -28,7 +28,7 @@ const HowItWorks = () => {
     <section className="py-16 bg-white" id="how-it-works">
       <div className="container mx-auto px-4 max-w-7xl">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold">How Unicorn Nails Works</h2>
+          <h2 className="text-3xl md:text-4xl font-bold">How Némai Works</h2>
           <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
             Find and book your perfect nail artist in just three simple steps
           </p>

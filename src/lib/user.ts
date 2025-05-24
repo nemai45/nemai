@@ -19,6 +19,19 @@ import {
 } from "./type";
 import { endOfMonth, format, startOfMonth, subMonths } from "date-fns";
 
+export const getAreas = async (): Promise<
+  Result<{ id: number; name: string }[]>
+> => {
+  const supabase = await createClient();
+  const { data, error: DBError } = await supabase
+    .from("area")
+    .select("id, name");
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  return { data: data };
+};
+
 export const getProfile = async (
   userId: string,
   role: string
@@ -43,7 +56,7 @@ export const getProfile = async (
     const { data: professional, error: professionalError } = await supabase
       .from("artist_profile")
       .select(
-        "business_name, logo, bio, address, upi_id, no_of_artists, booking_month_limit, location"
+        "business_name, logo, bio, address, upi_id, no_of_artists, booking_month_limit, location, area, is_work_from_home, is_available_at_client_home"
       )
       .eq("id", userId)
       .maybeSingle();
@@ -53,7 +66,11 @@ export const getProfile = async (
     if (!professional) {
       return { error: "Something went wrong!!" };
     }
-    const professionalInfo = professionalInfoSchema.safeParse(professional);
+    const professionalResp = {
+      ...professional,
+      area: professional.area?.toString(),
+    };
+    const professionalInfo = professionalInfoSchema.safeParse(professionalResp);
     if (!professionalInfo.success) {
       return { error: "Something went wrong!!" };
     }
@@ -111,6 +128,25 @@ export const getAlbums = async (
   };
 };
 
+export const getArtistLogo = async (
+  artistId: string
+): Promise<Result<string | null>> => {
+  const supabase = await createClient();
+  const { data, error: DBError } = await supabase
+    .from("artist_profile")
+    .select("logo")
+    .eq("id", artistId)
+    .maybeSingle();
+  if (DBError) {
+    return {
+      error: DBError.message,
+    };
+  }
+  return {
+    data: data?.logo || null,
+  };
+};
+
 export const getCoverImages = async (
   artistId: string
 ): Promise<Result<Image[]>> => {
@@ -137,7 +173,8 @@ export const getAlbumImages = async (
   const { data, error: DBError } = await supabase
     .from("images")
     .select("id, url")
-    .eq("album_id", albumId);
+    .eq("album_id", albumId)
+    .order("created_at", { ascending: false });
   if (DBError) {
     return {
       error: DBError.message,
@@ -518,14 +555,16 @@ export const getArtists = async (): Promise<Result<Artist[]>> => {
   }
   const { data, error: DBError } = await supabase
     .from("artist_profile")
-    .select("id, business_name, address, logo");
+    .select("id, business_name, area(name), logo");
   if (DBError) {
     return { error: DBError.message };
   }
   return { data: data };
 };
 
-export const getIncome = async (): Promise<Result<Income & { monthlyChart: MonthlyIncome[] }>> => {
+export const getIncome = async (): Promise<
+  Result<Income & { monthlyChart: MonthlyIncome[] }>
+> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -557,21 +596,27 @@ export const getIncome = async (): Promise<Result<Income & { monthlyChart: Month
 
   if (allOrdersError) return { error: allOrdersError.message };
 
-  const groupByMonth: Record<string, { serviceIncome: number; addOnIncome: number; total: number }> = {};
+  const groupByMonth: Record<
+    string,
+    { serviceIncome: number; addOnIncome: number; total: number }
+  > = {};
 
   let currentMonthIncome = 0;
   let lastMonthIncome = 0;
-  const serviceWiseIncome: Record<string, {
-    name: string;
-    serviceIncome: number;
-    addOnIncome: number;
-    total: number;
-  }> = {};
+  const serviceWiseIncome: Record<
+    string,
+    {
+      name: string;
+      serviceIncome: number;
+      addOnIncome: number;
+      total: number;
+    }
+  > = {};
 
   for (const order of allOrders) {
     const orderDate = new Date(order.date);
-    const monthKey = format(orderDate, 'yyyy-MM');
-    const label = format(orderDate, 'MMM yyyy');
+    const monthKey = format(orderDate, "yyyy-MM");
+    const label = format(orderDate, "MMM yyyy");
 
     if (!groupByMonth[monthKey]) {
       groupByMonth[monthKey] = {
@@ -619,8 +664,8 @@ export const getIncome = async (): Promise<Result<Income & { monthlyChart: Month
   // Construct monthly chart (last 6 months)
   const monthlyChart = [...Array(6)].map((_, i) => {
     const date = subMonths(now, 5 - i);
-    const monthKey = format(date, 'yyyy-MM');
-    const label = format(date, 'MMM yyyy');
+    const monthKey = format(date, "yyyy-MM");
+    const label = format(date, "MMM yyyy");
     const monthData = groupByMonth[monthKey] || {
       serviceIncome: 0,
       addOnIncome: 0,
@@ -643,3 +688,29 @@ export const getIncome = async (): Promise<Result<Income & { monthlyChart: Month
   };
 };
 
+export const getImage = async (imageId: string): Promise<Result<string>> => {
+  const supabase = await createClient();
+  const { data, error: DBError } = await supabase
+    .from("images")
+    .select("url")
+    .eq("id", imageId)
+    .maybeSingle();
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  if (!data) {
+    const { data, error: DBError } = await supabase
+      .from("cover_images")
+      .select("url")
+      .eq("id", imageId)
+      .maybeSingle();
+    if (DBError) {
+      return { error: DBError.message };
+    }
+    if (!data) {
+      return { error: "Image not found" };
+    }
+    return { data: data.url };
+  }
+  return { data: data.url };
+};

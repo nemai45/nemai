@@ -22,9 +22,12 @@ export const professionalInfoSchema = z.object({
   logo: z.string().nullable(),
   address: z.string().min(1, { message: "Address is required" }),
   upi_id: z.string().min(1, { message: "UPI ID is required" }),
+  area: z.string(),
   no_of_artists: z.number().default(1),
   booking_month_limit: z.number().min(1, { message: "Booking month limit must be at least 1" }).max(3, { message: "Booking month limit must be less than 3" }),
   location: z.string().nullable(),
+  is_work_from_home: z.boolean().default(false),
+  is_available_at_client_home: z.boolean().default(false),
 });
 
 export const combinedSchema = z.object({
@@ -164,6 +167,8 @@ export const bookingSchema = z.object({
   service_id: z.string(),
   start_time: z.number(),
   date: z.string(),
+  location_type: z.enum(["work_from_home", "client_home"]),
+  address: z.string().optional(),
 })
 
 export type Booking = z.infer<typeof bookingSchema>;
@@ -200,7 +205,9 @@ export type BookingInfo = z.infer<typeof bookingInfoSchema>;
 export const artistSchema = z.object({
   id: z.string(),
   business_name: z.string(),
-  address: z.string(),
+  area: z.object({
+    name: z.string(),
+  }),
   logo: z.string().nullable(),
 })
 

@@ -8,28 +8,34 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const getLocation = async (address: string) => {
-  const url = `https://api.opencagedata.com/geocode/v1/json`;
+  const url = `https://maps.googleapis.com/maps/api/geocode/json`;
+  const key = process.env.GOOGLE_MAPS_API_KEY;
+  if (!key) {
+    return {
+      error: "Google Maps API key is not set",
+    };
+  }
 
   try {
     const response = await axios.get(url, {
       params: {
-        key: process.env.NEXT_PUBLIC_OPENCAGE_API_KEY,
-        q: address,
-        limit: 1,
-        language: "en",
+        address: address,
+        key: key,
       },
     });
 
     const data = response.data;
-
+    console.log(data);
     if (data && data.results && data.results.length > 0) {
-      const location = data.results[0].geometry;
+      const location = data.results[0].geometry.location;
       return {
         lat: location.lat,
         lng: location.lng,
       };
     } else {
-      throw new Error("No results found");
+      return {
+        error: "No location found",
+      };
     }
   } catch (err) {
     if (err instanceof Error) {

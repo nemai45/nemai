@@ -12,14 +12,20 @@ import { AlbumWithImageCount } from "@/lib/type";
 import { MoreVertical, Trash } from "lucide-react";
 import Image from "next/image";
 import { Button } from "./ui/button";
+import { useState } from "react";
+import { toast } from "sonner";
+import NailLoader from "./NailLoader";
 
 interface AlbumGridProps {
   albums: AlbumWithImageCount[];
   onAlbumClick: (albumId: string) => void;
   isDeletable: boolean;
+  logo: string | null;
 }
 
-const AlbumGrid = ({ albums, onAlbumClick, isDeletable }: AlbumGridProps) => {
+const AlbumGrid = ({ albums, onAlbumClick, isDeletable, logo }: AlbumGridProps) => {
+  const [isLoading, setIsLoading] = useState(false);
+  if (isLoading) return <NailLoader />
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
       {albums.map((album) => (
@@ -31,7 +37,7 @@ const AlbumGrid = ({ albums, onAlbumClick, isDeletable }: AlbumGridProps) => {
           <CardContent className="p-0">
             <div className="relative aspect-square overflow-hidden">
               <Image
-                src={album.cover_image ? `https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${album.cover_image}` : "/hero.jpg"}
+                src={album.cover_image ? `https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${album.cover_image}` : logo ? `https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${logo}` : "/hero.jpg"}
                 width={100}
                 height={100}
                 alt={album.name}
@@ -55,9 +61,16 @@ const AlbumGrid = ({ albums, onAlbumClick, isDeletable }: AlbumGridProps) => {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-destructive"
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();  
-                        deleteAlbum(album.id);
+                        setIsLoading(true)
+                        const { error } = await deleteAlbum(album.id);
+                        if (error) {
+                          toast.error(error);
+                        } else {
+                          toast.success("Album deleted successfully!");
+                        }
+                        setIsLoading(false)
                       }}
                     >
                       <Trash className="mr-2 h-4 w-4" />

@@ -1,7 +1,7 @@
 import PortfolioManager from '@/components/dashboard/PortfolioManager'
 import { getUserRole } from '@/lib/get-user-role';
 import { AlbumWithImageCount } from '@/lib/type';
-import { getAlbums } from '@/lib/user'
+import { getAlbums, getArtistLogo } from '@/lib/user'
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import React from 'react'
@@ -28,8 +28,13 @@ const page = async () => {
     return <Error error={result.error} />
   }
 
+  const logoResult = await getArtistLogo(user.id);
+  if ('error' in logoResult) {
+    return <Error error={logoResult.error} />
+  }
+  const logo = logoResult.data;
   return (
-    <PortfolioManager albums={result.data.albums} coverImageCount={result.data.coverImageCount} />
+    <PortfolioManager albums={result.data.albums} coverImageCount={result.data.coverImageCount} logo={logo} />
   )
 }
 

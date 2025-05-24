@@ -9,6 +9,8 @@ import AddOnDrawer from '../AddOnDrawer';
 import { useUser } from '@/hooks/use-user';
 import { useRouter } from 'next/navigation';
 import Error from '../Error';
+import NailLoader from '../NailLoader';
+
 
 interface ServicesListProps {
   services: Service[];
@@ -29,7 +31,7 @@ const ServicesList = ({ services, isDrawerOpen, setIsDrawerOpen, isBooked, setIs
       router.push('/login');
     }
   }, [loading, user, router]);
-  if (loading) return <div>Loading...</div>
+  if (loading) return <NailLoader />
   if (error) return <Error error={error.message} />
   if (!user) return null;
 

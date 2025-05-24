@@ -2,23 +2,18 @@
 import { getUserRole } from "@/lib/get-user-role";
 import {
   AddOnBooking,
-  Album,
   Availability,
   BlockedDate,
   Booking,
   CombinedInfo,
-  Service,
+  Service
 } from "@/lib/type";
 import { timeToMinutes } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-export const onBoardUser = async (
-  data: CombinedInfo,
-  logo: File | null,
-  point: { lat: number; lng: number } | null
-) => {
+export const onBoardUser = async (data: CombinedInfo, logo: File | null) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -30,75 +25,72 @@ export const onBoardUser = async (
       error: error.message,
     };
   }
+  if (!role) {
+    return {
+      error: "User role not found",
+    };
+  }
   if (!user) {
     return {
       error: "User not found",
     };
   }
   const { personal, professional } = data;
-  const { error: DBError } = await supabase
-    .from("users")
-    .update({
-      first_name: personal.first_name,
-      last_name: personal.last_name,
-      phone_no: personal.phone_no,
-      onboarded: true,
-    })
-    .eq("id", user.id);
-  if (DBError) {
-    return {
-      error: DBError.message,
-    };
-  }
-  if (role === "artist" && professional) {
-    if (logo) {
-      const fileName = `${user.id}-${Date.now()}`;
-      const { data, error: DBError } = await supabase.storage
-        .from("logos")
-        .upload(fileName, logo);
-      if (DBError) {
-        return {
-          error: DBError.message,
-        };
-      }
-      professional.logo = data.fullPath;
-    }
-    if (!point) {
+
+  if (professional && logo) {
+    if (!professional.is_work_from_home && !professional.is_available_at_client_home) {
       return {
-        error: "Something went wrong",
+        error: "At least one of the options work from studio or available at client home must be selected",
       };
     }
-    const { error: DBError } = await supabase.rpc("store_artist", {
-      business_name: professional.business_name,
-      logo: professional.logo || null,
-      bio: professional.bio || null,
-      address: professional.address,
-      upi_id: professional.upi_id,
-      lat: point.lat,
-      lng: point.lng,
-      no_of_artists: professional.no_of_artists,
-      booking_month_limit: professional.booking_month_limit,
-      location: professional.location || null,
-    });
+    const fileName = `${user.id}-${Date.now()}`;
+    const { data, error: DBError } = await supabase.storage
+      .from("logos")
+      .upload(fileName, logo);
     if (DBError) {
       return {
         error: DBError.message,
       };
     }
+    professional.logo = data.fullPath;
+  }
+
+  const { error: rpcError } = await supabase.rpc("onboard_user", {
+    user_id: user.id,
+    role: role,
+    first_name: personal.first_name,
+    last_name: personal.last_name,
+    phone_no: personal.phone_no,
+    business_name: professional?.business_name,
+    logo: professional?.logo || undefined,
+    address: professional?.address,
+    bio: professional?.bio || undefined,
+    upi_id: professional?.upi_id,
+    no_of_artists: professional?.no_of_artists,
+    booking_month_limit: professional?.booking_month_limit,
+    location: professional?.location || undefined,
+    area: parseInt(professional?.area || "0"),
+    is_work_from_home: professional?.is_work_from_home,
+    is_available_at_client_home: professional?.is_available_at_client_home,
+  });
+
+  if (rpcError) {
+    return {
+      error: rpcError.message,
+    };
+  }
+  if (role === "customer") {
+    redirect("/customer-dashboard");
+  } else {
     redirect("/artist-dashboard");
   }
-  redirect("/customer-dashboard");
   return {
     logo: null,
     error: null,
   };
 };
 
-export const updateUser = async (
-  data: CombinedInfo,
-  logo: File | null,
-  point: { lat: number; lng: number } | null
-) => {
+export const updateUser = async (data: CombinedInfo, logo: File | null) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -116,6 +108,7 @@ export const updateUser = async (
     };
   }
   const { personal, professional } = data;
+
   const { error: DBError } = await supabase
     .from("users")
     .update({
@@ -130,9 +123,13 @@ export const updateUser = async (
     };
   }
   if (role === "artist" && professional) {
+    if (!professional.is_work_from_home && !professional.is_available_at_client_home) {
+      return {
+        error: "At least one of the options work from studio or available at client home must be selected",
+      };
+    }
     if (logo) {
       if (professional.logo) {
-        console.log("Removing old logo", professional.logo.split("/").pop());
         const { error: DBError } = await supabase.storage
           .from("logos")
           .remove([professional.logo.split("/").pop()!]);
@@ -166,6 +163,9 @@ export const updateUser = async (
         no_of_artists: professional.no_of_artists,
         booking_month_limit: professional.booking_month_limit,
         location: professional.location || null,
+        area: parseInt(professional.area || "0"),
+        is_work_from_home: professional.is_work_from_home,
+        is_available_at_client_home: professional.is_available_at_client_home,
       })
       .eq("id", user.id);
     if (DBError) {
@@ -657,6 +657,47 @@ export const deleteAlbumImage = async (
     };
   }
 
+  const { data: isLatest, error: isLatestError } = await supabase
+    .from("albums")
+    .select("cover_image")
+    .eq("id", albumId)
+    .single();
+  if (isLatestError) {
+    return {
+      error: isLatestError.message,
+    };
+  }
+
+  if (isLatest.cover_image === fullPath) {
+    const { data: latestAlbumImage, error: latestAlbumImageError } = await supabase
+      .from("images")
+      .select("url")
+      .eq("album_id", albumId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+      
+    if (latestAlbumImageError) {
+      return {
+        error: latestAlbumImageError.message,
+      };
+    }
+
+    const { error: updateError } = await supabase
+      .from("albums")
+      .update({
+        cover_image: latestAlbumImage?.url || null,
+      })
+      .eq("id", albumId);
+
+    if (updateError) {
+      return {
+        error: updateError.message,
+      };
+    }
+  }
+
+
   const { error: err } = await supabase.storage
     .from("images")
     .remove([fullPath.split("/").pop()!]);
@@ -778,7 +819,7 @@ export const addAvailability = async (data: Availability) => {
     .not("end_time", "lt", timeToMinutes(data.startTime));
 
   if (fetchError) {
-    console.log(fetchError)
+    console.log(fetchError);
     return {
       error: "Something went wrong",
     };
@@ -979,18 +1020,26 @@ export const addBlockedDate = async (data: BlockedDate) => {
     const bookingStartTime = booking.start_time;
     const bookingEndTime = bookingStartTime + booking.services.duration;
 
-    for (let minute = Math.max(startTime, bookingStartTime); minute < Math.min(endTime, bookingEndTime); minute += 30) {
+    for (
+      let minute = Math.max(startTime, bookingStartTime);
+      minute < Math.min(endTime, bookingEndTime);
+      minute += 30
+    ) {
       if (timeSlots[minute] && timeSlots[minute] > 0) {
         timeSlots[minute]--;
       }
     }
   }
-  
-  for(const blocked of blockedData) {
+
+  for (const blocked of blockedData) {
     const blockedStartTime = blocked.start_time;
     const blockedEndTime = blocked.end_time;
 
-    for(let minute = Math.max(startTime, blockedStartTime); minute < Math.min(endTime, blockedEndTime); minute += 30) {
+    for (
+      let minute = Math.max(startTime, blockedStartTime);
+      minute < Math.min(endTime, blockedEndTime);
+      minute += 30
+    ) {
       if (timeSlots[minute] && timeSlots[minute] > 0) {
         timeSlots[minute]--;
       }
@@ -1124,7 +1173,7 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
     }
     return {
       error: serviceError.message,
-    }
+    };
   }
 
   const startTime = booking.start_time;
@@ -1137,16 +1186,16 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
     .from("availability")
     .select("*")
     .eq("artist_id", serviceData.artist_id)
-    .eq("day", day) 
+    .eq("day", day)
     .lte("start_time", startTime)
     .gte("end_time", endTime);
-  
+
   if (availabilityError) {
     return {
       error: availabilityError.message,
     };
   }
-  
+
   if (availabilityData.length === 0) {
     return {
       error: "This slot is not available",
@@ -1160,7 +1209,7 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
     .eq("date", booking.date)
     .not("end_time", "lt", startTime)
     .not("start_time", "gt", endTime);
-  
+
   if (blockedDateError) {
     return {
       error: blockedDateError.message,
@@ -1201,7 +1250,11 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
     const bookingStartTime = booking.start_time;
     const bookingEndTime = bookingStartTime + booking.services.duration;
 
-    for (let minute = Math.max(startTime, bookingStartTime); minute < Math.min(endTime, bookingEndTime); minute += 30) {
+    for (
+      let minute = Math.max(startTime, bookingStartTime);
+      minute < Math.min(endTime, bookingEndTime);
+      minute += 30
+    ) {
       if (timeSlots[minute] && timeSlots[minute] > 0) {
         timeSlots[minute]--;
       }
@@ -1212,7 +1265,11 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
     const blockedStartTime = blocked.start_time;
     const blockedEndTime = blocked.end_time;
 
-    for (let minute = Math.max(startTime, blockedStartTime); minute < Math.min(endTime, blockedEndTime); minute += 30) {
+    for (
+      let minute = Math.max(startTime, blockedStartTime);
+      minute < Math.min(endTime, blockedEndTime);
+      minute += 30
+    ) {
       if (timeSlots[minute] && timeSlots[minute] > 0) {
         timeSlots[minute]--;
       }
@@ -1226,6 +1283,12 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
       error: "This slot is not available",
     };
   }
+
+  if(booking.location_type === "client_home" && !booking.address) {
+    return {
+      error: "Address is required",
+    };
+  }
   
   const { data: newOrder, error: DBError } = await supabase
     .from("order")
@@ -1234,6 +1297,7 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
       start_time: booking.start_time,
       date: booking.date,
       user_id: user.id,
+      client_address: booking.location_type === "client_home" ? booking.address : null,
     })
     .select("id")
     .single();

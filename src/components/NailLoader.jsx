@@ -1,14 +1,11 @@
-import React from "react";
+import Image from "next/image";
 
 const NailLoader = () => {
   return (
-    <div className="nail-loader">
-      <div className="nail">
-        <div className="paint"></div>
-      </div>
-      <div className="loading-text">Painting your nails...</div>
+    <div className="loader-overlay">
+      <Image src="/aesthetic-nails.gif" alt="Nail Loader" width={400} height={400} />
     </div>
-  );
+  );  
 };
 
 export default NailLoader;

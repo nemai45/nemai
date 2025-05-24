@@ -9,7 +9,6 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from '@/components/ui/textarea';
 import { useUser } from '@/hooks/use-user';
 import { CombinedInfo, combinedSchema, PersonalInfo, ProfessionalInfo } from '@/lib/type';
-import { getLocation } from '@/lib/utils'; // Assuming getLocation exists and works
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Camera } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -18,11 +17,15 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import Error from './Error';
 import NailLoader from './NailLoader';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Checkbox } from './ui/checkbox';
+import { cn } from '@/lib/utils';
 
 interface ProfileCardProps {
     personalInfo: PersonalInfo
     professionalInfo: ProfessionalInfo | null
-    handleSubmit: (data: CombinedInfo, logo: File | null, point: { lat: number, lng: number } | null) => Promise<{
+    areas: { id: number, name: string }[]
+    handleSubmit: (data: CombinedInfo, logo: File | null) => Promise<{
         error: string;
         logo?: undefined;
     } | {
@@ -34,7 +37,7 @@ interface ProfileCardProps {
 const SUPABASE_BUCKET_URL_PREFIX = "https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/";
 
 
-const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, handleSubmit }) => {
+const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, handleSubmit, areas }) => {
     const [logo, setLogo] = useState<File | null>(null);
     const [logoUrl, setLogoUrl] = useState<string | null>(professionalInfo?.logo ? `${SUPABASE_BUCKET_URL_PREFIX}${professionalInfo.logo}` : null);
 
@@ -75,31 +78,18 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
     }, [professionalInfo?.logo, logo]);
 
 
-    if (isLoad) return <div>Loading...</div>;
+    if (isLoad) return <NailLoader />;
     if (error) return <Error error={(error as any).message || 'An unknown error occurred'} />;
     if (!user) return null;
 
     const onSubmit = async (data: CombinedInfo) => {
         setLoading(true);
-        if (data.professional && (data.professional.no_of_artists ?? 0) < 1 && data.professional.no_of_artists !== null) { // Check if not null before comparing
-            toast.error('Number of artists must be at least 1');
+        if (!data.professional?.is_work_from_home && !data.professional?.is_available_at_client_home) {
+            toast.error("At least one of the options work from studio or available at client home must be selected");
             setLoading(false);
             return;
         }
-        let point: { lat: number, lng: number } | null = null;
-        if (data.professional?.address && isAddressChanged) {
-            const locationResult = await getLocation(data.professional.address);
-            if (locationResult.error) {
-                toast.error(locationResult.error);
-                setLoading(false);
-                return;
-            }
-            point = { lat: locationResult.lat, lng: locationResult.lng };
-        }
-
-        const submitData = { ...data };
-
-        const { logo: newLogo, error: submitError } = await handleSubmit(submitData, logo, point);
+        const { logo: newLogo, error: submitError } = await handleSubmit(data, logo);
         if (submitError) {
             toast.error(submitError);
             setLoading(false);
@@ -284,6 +274,31 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
                                         />
                                         <FormField
                                             control={form.control}
+                                            name="professional.area"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Area</FormLabel>
+                                                    <FormControl>
+                                                        <Select onValueChange={(value: string) => {
+                                                            console.log(value)
+                                                            field.onChange(value)
+                                                        }} defaultValue={field.value}>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Select Area" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {areas.map((area) => (
+                                                                    <SelectItem key={area.id} value={area.id.toString()}>{area.name}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
                                             name="professional.upi_id"
                                             render={({ field }) => (
                                                 <FormItem>
@@ -355,6 +370,36 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
                                                 </FormItem>
                                             )}
                                         />
+                                        <FormField
+                                            control={form.control}
+                                            name="professional.is_work_from_home"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormControl>
+                                                        <div className='flex items-center gap-2'>
+                                                            <Checkbox checked={field.value} onCheckedChange={field.onChange} style={{ width: '1.5rem', height: '1.5rem' }} />
+                                                            <FormLabel>Work from Home</FormLabel>
+                                                        </div>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="professional.is_available_at_client_home"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormControl>
+                                                        <div className='flex items-center gap-2'>
+                                                            <Checkbox checked={field.value} onCheckedChange={field.onChange} style={{ width: '1.5rem', height: '1.5rem' }} />
+                                                            <FormLabel>Available at Client Home</FormLabel>
+                                                        </div>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
                                     </div>
                                 </>
                             )}
@@ -367,6 +412,7 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
                 </form>
             </Form>
             <ImageCropperModal
+
                 isOpen={showCropper}
                 onClose={() => {
                     setShowCropper(false);
