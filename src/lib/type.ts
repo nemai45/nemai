@@ -168,7 +168,7 @@ export const bookingSchema = z.object({
   start_time: z.number(),
   date: z.string(),
   location_type: z.enum(["work_from_home", "client_home"]),
-  address: z.string().optional(),
+  address: z.string().nullable(),
 })
 
 export type Booking = z.infer<typeof bookingSchema>;
