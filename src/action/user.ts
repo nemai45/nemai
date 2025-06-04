@@ -35,6 +35,18 @@ export const onBoardUser = async (data: CombinedInfo, logo: File | null) => {
       error: "User not found",
     };
   }
+  const { data: isVerified, error: authError } = await supabase.from("users").select("is_phone_verified").eq("id", user.id).single();
+  if (authError) {
+    return {
+      error: authError.message,
+    };
+  }
+  if (!isVerified.is_phone_verified) {
+    return {
+      error: "Please verify your phone number",
+    };
+  }
+
   const { personal, professional } = data;
 
   if (professional && logo) {
@@ -519,6 +531,7 @@ export const addCoverImage = async (file: File) => {
       error: err.message,
     };
   }
+  revalidatePath("/album/cover-images");
   return {
     error: null,
   };
@@ -596,7 +609,7 @@ export const addAlbumImage = async (file: File, albumId: string) => {
     };
   }
 
-  revalidatePath(`/artist-dashboard/portfolio/${albumId}`);
+  revalidatePath(`/album/${albumId}`);
   return {
     error: null,
   };
@@ -707,7 +720,7 @@ export const deleteAlbumImage = async (
     };
   }
 
-  revalidatePath(`/artist-dashboard/portfolio/${albumId}`);
+  revalidatePath(`/album/${albumId}`);
   return {
     error: null,
   };
@@ -769,7 +782,7 @@ export const deleteCoverImage = async (imageId: string, fullPath: string) => {
       error: err.message,
     };
   }
-  revalidatePath("/artist-dashboard/cover-images");
+  revalidatePath("/album/cover-images");
   return {
     error: null,
   };

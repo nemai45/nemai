@@ -17,14 +17,19 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import Error from './Error';
 import NailLoader from './NailLoader';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox } from './ui/checkbox';
-import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import OtpDialog from './OtpDialog';
+import { sendOtp } from '@/action/auth';
+import { OTP_EXPIRE_TIME } from '@/lib/utils';
 
 interface ProfileCardProps {
     personalInfo: PersonalInfo
     professionalInfo: ProfessionalInfo | null
     areas: { id: number, name: string }[]
+    isOnBoarding?: boolean
     handleSubmit: (data: CombinedInfo, logo: File | null) => Promise<{
         error: string;
         logo?: undefined;
@@ -37,7 +42,7 @@ interface ProfileCardProps {
 const SUPABASE_BUCKET_URL_PREFIX = "https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/";
 
 
-const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, handleSubmit, areas }) => {
+const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, handleSubmit, areas, isOnBoarding = false }) => {
     const [logo, setLogo] = useState<File | null>(null);
     const [logoUrl, setLogoUrl] = useState<string | null>(professionalInfo?.logo ? `${SUPABASE_BUCKET_URL_PREFIX}${professionalInfo.logo}` : null);
 
@@ -47,7 +52,11 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
     const [showCropper, setShowCropper] = useState<boolean>(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
+    const [open, setOpen] = useState<boolean>(false);
+    const [timeLeft, setTimeLeft] = useState<number>(0);
+    const [showResend, setShowResend] = useState<boolean>(false);
+    const [verificationId, setVerificationId] = useState<string | null>(null);
+    const [isVerified, setIsVerified] = useState<boolean>(!!personalInfo.phone_no);
 
     const form = useForm({
         resolver: zodResolver(combinedSchema),
@@ -84,6 +93,11 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
 
     const onSubmit = async (data: CombinedInfo) => {
         setLoading(true);
+        if (isOnBoarding && !isVerified) {
+            toast.error("Please verify your phone number");
+            setLoading(false);
+            return;
+        }
         if (!data.professional?.is_work_from_home && !data.professional?.is_available_at_client_home) {
             toast.error("At least one of the options work from studio or available at client home must be selected");
             setLoading(false);
@@ -126,6 +140,30 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
     const getInitials = (firstName?: string, lastName?: string) => {
         return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
     };
+
+    const sendPhoneOtp = async () => {
+        const phoneNumber = form.getValues('personal.phone_no')
+        if(phoneNumber.length !== 10){
+            toast.error("Please enter a valid phone number")
+            return
+        }
+
+        if (timeLeft > 0 || showResend) {
+            setOpen(true)
+            return
+        }
+
+        setLoading(true)
+        const response = await sendOtp(phoneNumber)
+        if (response.error) {
+            toast.error(response.error)
+        } else {
+            setTimeLeft(OTP_EXPIRE_TIME)
+            setVerificationId(response.data.verificationId)
+            setOpen(true)
+        }
+        setLoading(false)
+    }
 
     return (
         <>
@@ -186,12 +224,22 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
                                             <FormItem>
                                                 <FormLabel>Phone</FormLabel>
                                                 <FormControl>
-                                                    <Input {...field} value={field.value || ''} />
+                                                    <Input {...field} value={field.value || ''} readOnly={!isOnBoarding || isVerified} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
+                                    {
+                                        isOnBoarding && (
+                                            <>
+                                                <Button type="button" onClick={sendPhoneOtp} disabled={isVerified}>
+                                                    Verify Phone Number
+                                                </Button>
+                                                <OtpDialog showResend={showResend} setShowResend={setShowResend} verificationId={verificationId} setVerificationId={setVerificationId} phoneNumber={form.getValues('personal.phone_no')} open={open} onOpenChange={setOpen} timeLeft={timeLeft} setTimeLeft={setTimeLeft} isVerified={isVerified} setIsVerified={setIsVerified} />
+                                            </>
+                                        )
+                                    }
                                 </div>
                             </div>
 
@@ -378,7 +426,7 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
                                                     <FormControl>
                                                         <div className='flex items-center gap-2'>
                                                             <Checkbox checked={field.value} onCheckedChange={field.onChange} style={{ width: '1.5rem', height: '1.5rem' }} />
-                                                            <FormLabel>Work from Home</FormLabel>
+                                                            <FormLabel>Nail Studio</FormLabel>
                                                         </div>
                                                     </FormControl>
                                                     <FormMessage />
@@ -393,7 +441,7 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
                                                     <FormControl>
                                                         <div className='flex items-center gap-2'>
                                                             <Checkbox checked={field.value} onCheckedChange={field.onChange} style={{ width: '1.5rem', height: '1.5rem' }} />
-                                                            <FormLabel>Available at Client Home</FormLabel>
+                                                            <FormLabel>Available at Client Location</FormLabel>
                                                         </div>
                                                     </FormControl>
                                                     <FormMessage />

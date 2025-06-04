@@ -1,6 +1,6 @@
 import OnBoarding from '@/components/OnBoarding'
 import { getUserRole } from '@/lib/get-user-role'
-import { getAreas } from '@/lib/user'
+import { getAreas, getVerifiedPhone } from '@/lib/user'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 
@@ -19,8 +19,14 @@ const page = async () => {
     console.error(areas.error)
     return redirect('/login')
   }
+  const verifiedPhone = await getVerifiedPhone();
+  if ('error' in verifiedPhone) {
+    console.error(verifiedPhone.error)
+    return redirect('/login')
+  }
+
   return (
-    <OnBoarding email={user.email} role={role} areas={areas.data} />
+    <OnBoarding phone={verifiedPhone.data} email={user.email} role={role} areas={areas.data} />
   )
 }
 

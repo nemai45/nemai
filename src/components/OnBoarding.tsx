@@ -7,15 +7,17 @@ interface OnBoardingProps {
   email: string;
   role: string;
   areas: {id: number, name: string}[]
+  phone: string | null
 }
 
-const OnBoarding:FC<OnBoardingProps> = ({ email, role, areas }) => {
+const OnBoarding:FC<OnBoardingProps> = ({ email, role, areas, phone }) => {
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
     email: email,
     first_name: '',
     last_name: '',
-    phone_no: ''
+    phone_no: phone || ''
   })
+
   const [professionalInfo, setProfessionalInfo] = useState<ProfessionalInfo>({
     business_name: '',
     logo: null,
@@ -33,7 +35,7 @@ const OnBoarding:FC<OnBoardingProps> = ({ email, role, areas }) => {
 
   return (
     <div className="flex items-center justify-center w-full h-full p-4">
-      <ProfileCard  handleSubmit={onBoardUser} personalInfo={personalInfo} professionalInfo={role === 'artist' ? professionalInfo : null} areas={areas}/>
+      <ProfileCard isOnBoarding={true} handleSubmit={onBoardUser} personalInfo={personalInfo} professionalInfo={role === 'artist' ? professionalInfo : null} areas={areas}/>
     </div>
   )
 }

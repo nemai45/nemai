@@ -337,6 +337,28 @@ export const getArtistServices = async (
   };
 };
 
+export const getVerifiedPhone = async (): Promise<Result<string | null>> => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!user) {
+    return { error: "User not found" };
+  }
+  const { data: isVerified, error: authError } = await supabase.from("users").select("phone_no, is_phone_verified").eq("id", user.id).single();
+  if (authError) {
+    return { error: authError.message };
+  }
+  if (!isVerified.is_phone_verified || !isVerified.phone_no) {
+    return { data: null };
+  }
+  return { data: isVerified.phone_no };
+}
+
 export const getArtistProfile = async (
   artistId: string
 ): Promise<{

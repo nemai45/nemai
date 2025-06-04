@@ -5,6 +5,7 @@ import AlbumView from '@/components/AlbumView';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import Error from '@/components/Error';
+
 const page = async ({ params }: { params: Promise<{ albumId: string }> }) => {
     const { albumId } = await params;
     const supabase = await createClient();

@@ -12,13 +12,14 @@ import {
 import { useUser } from "@/hooks/use-user";
 import { Image as ImageType } from "@/lib/type";
 import { MoreVertical, Trash } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Error from "./Error";
-import { useEffect, useState } from "react";
+import ImageAddDialog from "./ImageAddDialog";
 import NailLoader from "./NailLoader";
-import Image from "next/image";
 
 interface AlbumViewProps {
   albumId: string;
@@ -32,6 +33,8 @@ const AlbumView = ({
   const router = useRouter();
   const { user, loading, error } = useUser();
   const [isLoading, setIsLoading] = useState(false);
+  const [isAddingImage, setIsAddingImage] = useState(false);
+
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
@@ -72,10 +75,17 @@ const AlbumView = ({
         <Button variant="outline" onClick={() => router.back()}>
           Back
         </Button>
-        <p className="text-muted-foreground ml-auto">
-          {items.length} {items.length === 1 ? "photo" : "photos"}
-        </p>
+        <>
+          <p className="text-muted-foreground ml-auto">
+            {items.length} {items.length === 1 ? "photo" : "photos"}
+          </p>
+          <Button onClick={() => setIsAddingImage(true)}>
+            Add Image
+          </Button>
+        </>
       </div>
+      {isAddingImage && <ImageAddDialog isCoverImage={albumId === "cover-images"} isAddingImage={isAddingImage} setIsAddingImage={setIsAddingImage} albumId={albumId} />}
+
 
       {items.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">

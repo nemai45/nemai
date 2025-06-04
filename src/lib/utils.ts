@@ -56,6 +56,8 @@ export const minutesToTime = (minutes: number) => {
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 }
 
+export const OTP_EXPIRE_TIME = 60;
+
 export const timeToMinutes = (time: string) => {
   const [hours, mins] = time.split(':').map(Number);
   return hours * 60 + mins;
