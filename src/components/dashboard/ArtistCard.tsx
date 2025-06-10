@@ -1,25 +1,32 @@
 "use client"
+import { deleteArtist } from "@/action/user"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Artist } from "@/lib/type"
 import { MapPin } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 interface ArtistCardProps {
   artist: Artist
+  role: string
 }
 
 const SUPABASE_BUCKET_URL_PREFIX = "https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/"
 
-const ArtistCard = ({ artist }: ArtistCardProps) => {
-  const router = useRouter()
-
-  const viewArtistProfile = () => {
-    router.push(`/artist-profile/${artist.id}`)
+const ArtistCard = ({ artist, role }: ArtistCardProps) => {
+  const deleteArtistByID = async () => {
+    if (!confirm("Are you sure you want to delete this artist?")) {
+      return;
+    }
+    const result = await deleteArtist(artist.id);
+    if ('error' in result) {
+      toast.error(result.error);
+    } else {
+      toast.success("Artist deleted successfully");
+    }
   }
-
   return (
     <Card
       key={artist.id}
@@ -43,11 +50,19 @@ const ArtistCard = ({ artist }: ArtistCardProps) => {
           <span>{artist.area?.name || "N/A"}</span>
         </div>
         <div className="flex-grow" />
-        <Link href={`/artist-profile/${artist.id}`}>
-          <Button className="w-full mt-4 unicorn-button">Book Now</Button>
-        </Link>
+        {role === "admin" ? (
+          <>
+            <Link href={`/artist/${artist.id}`}>
+              <Button className="w-full mt-4 unicorn-button">View</Button>
+            </Link>
+            <Button className="w-full mt-4 unicorn-button" onClick={deleteArtistByID}>Delete</Button>
+          </>
+        ) : (
+          <Link href={`/artist-profile/${artist.id}`}>
+            <Button className="w-full mt-4 unicorn-button">Book Now</Button>
+          </Link>
+        )}
       </CardContent>
-
     </Card>
   )
 }

@@ -1,5 +1,5 @@
 "use client"
-import { addAlbumImage, addCoverImage, createAlbum } from "@/action/user";
+import { createAlbum } from "@/action/user";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,31 +10,28 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser } from "@/hooks/use-user";
 import { Album, albumSchema, AlbumWithImageCount } from "@/lib/type";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ImageIcon, ImagePlus, Plus, Trash } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type React from "react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import AlbumGrid from "../AlbumGrid";
 import Error from "../Error";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
-import ImageCropperModal from "../ImageCropperModal";
 import NailLoader from "../NailLoader";
-import Image from "next/image";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
 interface PortfolioManagerProps {
+  id?: string;
+  role?: string;
   albums: AlbumWithImageCount[];
   coverImageCount: number;
   logo: string | null;
 }
 
 
-const PortfolioManager = ({ albums, coverImageCount, logo }: PortfolioManagerProps) => {
+const PortfolioManager = ({ id, role, albums, coverImageCount, logo }: PortfolioManagerProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [newAlbumName, setNewAlbumName] = useState("");
   const [isAddingNewAlbum, setIsAddingNewAlbum] = useState(false);
@@ -83,7 +80,11 @@ const PortfolioManager = ({ albums, coverImageCount, logo }: PortfolioManagerPro
   };
 
   const handleOpenAlbumView = (albumId: string) => {
-    router.push(`/album/${albumId}`);
+    if (role === "admin" && id) {
+      router.push(`/artist/${id}/album/${albumId}`);
+    } else {
+      router.push(`/album/${albumId}`);
+    }
   };
 
   if (isLoading) return <NailLoader />

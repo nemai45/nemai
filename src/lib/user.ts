@@ -37,6 +37,7 @@ export const getProfile = async (
   role: string
 ): Promise<Result<CombinedInfo>> => {
   const supabase = await createClient();
+  console.log(userId, role);
   const { data: personal, error: personalError } = await supabase
     .from("users")
     .select("first_name, last_name, phone_no, email")
@@ -190,32 +191,34 @@ export const getAlbumImages = async (
   };
 };
 
-export const getAvailability = async (): Promise<Result<DBAvailability[]>> => {
+export const getAvailability = async (
+  artistId?: string
+): Promise<Result<DBAvailability[]>> => {
   const supabase = await createClient();
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
   if (error) {
-    return {
-      error: error.message,
-    };
+    return { error: error.message };
   }
   if (!user) {
-    return {
-      error: "User not found",
-    };
+    return { error: "User not found" };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
-    return {
-      error: "User is not an artist",
-    };
+  if (role !== "artist" && role !== "admin") {
+    return { error: "User is not an artist" };
+  }
+  if (role === "artist" && !artistId) {
+    artistId = user.id;
+  }
+  if (!artistId) {
+    return { error: "Artist ID not found" };
   }
   const { data, error: DBError } = await supabase
     .from("availability")
     .select("id, start_time, end_time, day")
-    .eq("artist_id", user.id);
+    .eq("artist_id", artistId);
   if (DBError) {
     return {
       error: DBError.message,
@@ -226,7 +229,9 @@ export const getAvailability = async (): Promise<Result<DBAvailability[]>> => {
   };
 };
 
-export const getBlockedDates = async (): Promise<Result<DBBlockedDate[]>> => {
+export const getBlockedDates = async (
+  artistId?: string
+): Promise<Result<DBBlockedDate[]>> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -239,14 +244,20 @@ export const getBlockedDates = async (): Promise<Result<DBBlockedDate[]>> => {
     return { error: "User not found" };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
+  if (role !== "artist" && role !== "admin") {
     return { error: "User is not an artist" };
+  }
+  if (role === "artist" && !artistId) {
+    artistId = user.id;
+  }
+  if (!artistId) {
+    return { error: "Artist ID not found" };
   }
 
   const { data, error: DBError } = await supabase
     .from("blocked_date")
     .select("id, date, no_of_artist, start_time, end_time")
-    .eq("artist_id", user.id);
+    .eq("artist_id", artistId);
   if (DBError) {
     return { error: DBError.message };
   }
@@ -255,7 +266,7 @@ export const getBlockedDates = async (): Promise<Result<DBBlockedDate[]>> => {
   };
 };
 
-export const getNoOfArtists = async (): Promise<Result<number>> => {
+export const getNoOfArtists = async (artistId?: string): Promise<Result<number>> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -268,13 +279,19 @@ export const getNoOfArtists = async (): Promise<Result<number>> => {
     return { error: "User not found" };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
+  if (role !== "artist" && role !== "admin") {
     return { error: "User is not an artist" };
+  }
+  if(role === "artist" && !artistId) {
+    artistId = user.id
+  }
+  if(!artistId) {
+    return { error: "Artist ID not found" };
   }
   const { data, error: DBError } = await supabase
     .from("artist_profile")
     .select("no_of_artists")
-    .eq("id", user.id)
+    .eq("id", artistId)
     .single();
 
   if (DBError) {
@@ -349,7 +366,11 @@ export const getVerifiedPhone = async (): Promise<Result<string | null>> => {
   if (!user) {
     return { error: "User not found" };
   }
-  const { data: isVerified, error: authError } = await supabase.from("users").select("phone_no, is_phone_verified").eq("id", user.id).single();
+  const { data: isVerified, error: authError } = await supabase
+    .from("users")
+    .select("phone_no, is_phone_verified")
+    .eq("id", user.id)
+    .single();
   if (authError) {
     return { error: authError.message };
   }
@@ -357,7 +378,7 @@ export const getVerifiedPhone = async (): Promise<Result<string | null>> => {
     return { data: null };
   }
   return { data: isVerified.phone_no };
-}
+};
 
 export const getArtistProfile = async (
   artistId: string
@@ -462,7 +483,9 @@ const options: Intl.DateTimeFormatOptions = {
 const formatter = new Intl.DateTimeFormat("en-IN", options);
 const dateInIST = formatter.format(new Date());
 
-export const getArtistBookings = async (): Promise<Result<BookingInfo[]>> => {
+export const getArtistBookings = async (
+  artistId?: string
+): Promise<Result<BookingInfo[]>> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -475,8 +498,14 @@ export const getArtistBookings = async (): Promise<Result<BookingInfo[]>> => {
     return { error: "User not found" };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
+  if (role !== "artist" && role !== "admin") {
     return { error: "User is not an artist" };
+  }
+  if (role === "artist" && !artistId) {
+    artistId = user.id;
+  }
+  if (!artistId) {
+    return { error: "Artist ID not found" };
   }
   const date = dateInIST.split(",")[0];
   const formattedDate = date.split("/").reverse().join("-");
@@ -485,7 +514,7 @@ export const getArtistBookings = async (): Promise<Result<BookingInfo[]>> => {
     .select(
       "id, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count)"
     )
-    .eq("services.artist_id", user.id)
+    .eq("services.artist_id", artistId)
     .gte("date", formattedDate)
     .order("date");
   if (DBError) {
@@ -572,8 +601,8 @@ export const getArtists = async (): Promise<Result<Artist[]>> => {
     return { error: "User not found" };
   }
   const role = await getUserRole();
-  if (role !== "customer") {
-    return { error: "User is not a customer" };
+  if (role !== "customer" && role !== "admin") {
+    return { error: "User is not a customer or admin" };
   }
   const { data, error: DBError } = await supabase
     .from("artist_profile")
@@ -736,3 +765,4 @@ export const getImage = async (imageId: string): Promise<Result<string>> => {
   }
   return { data: data.url };
 };
+

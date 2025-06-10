@@ -1,5 +1,3 @@
-import Header from "@/components/layout/Header"
-import Footer from "@/components/layout/Footer"
 import ArtistProfile from "@/components/profile/ArtistProfile"
 import { getArtistProfile } from "@/lib/user"
 

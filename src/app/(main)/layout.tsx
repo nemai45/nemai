@@ -4,6 +4,7 @@ import { SidebarLayout, SidebarMenuItemType } from '@/components/Sidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { getUserRole } from '@/lib/get-user-role';
 import { createClient } from '@/utils/supabase/server';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import React from 'react';
 
@@ -71,6 +72,7 @@ const layout = async ({
   ]
 
   const role = await getUserRole()
+
   let menuItems: SidebarMenuItemType[] = []
   if (role === "admin") {
     menuItems = adminMenuItems

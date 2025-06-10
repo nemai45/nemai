@@ -11,9 +11,10 @@ import { Sheet, SheetClose, SheetContent, SheetFooter, SheetHeader, SheetTitle, 
 
 interface ArtistListProps {
   artists: Artist[];
+  role: string;
 }
 
-const ArtistList = ({ artists }: ArtistListProps) => {
+const ArtistList = ({ artists, role }: ArtistListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
 
@@ -97,7 +98,7 @@ const ArtistList = ({ artists }: ArtistListProps) => {
       {filteredArtists.length > 0 ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredArtists.map((artist) => (
-            <ArtistCard key={artist.id} artist={artist} />
+            <ArtistCard key={artist.id} artist={artist} role={role} />
           ))}
         </div>
       ) : (

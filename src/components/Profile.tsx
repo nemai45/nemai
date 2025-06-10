@@ -6,7 +6,11 @@ import { getUserRole } from '@/lib/get-user-role';
 import Error from './Error';
 import { redirect } from 'next/navigation';
 
-const Profile = async () => {
+interface ProfileProps {
+    id?: string
+}
+
+const Profile = async ({ id }: ProfileProps) => {
     const supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error) {
@@ -20,7 +24,7 @@ const Profile = async () => {
     if (!role) {
         redirect('/login')
     }
-    const result = await getProfile(user.id, role);
+    const result = await getProfile(id ?? user.id, role === "admin" ? "artist" : role);
     if ('error' in result) {
         console.error(result.error)
         return <Error error={result.error} />

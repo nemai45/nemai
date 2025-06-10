@@ -7,29 +7,50 @@ import { FcGoogle } from 'react-icons/fc';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
-import { signInWithGoogle } from '@/action/auth';
+import { sendOtp, sendOtpForLogin, signInWithGoogle } from '@/action/auth';
 import { toast } from 'sonner';
+import { OTP_EXPIRE_TIME } from '@/lib/utils';
+import OtpDialog from './OtpDialog';
 
 const Auth = () => {
-    const [formData, setFormData] = useState({
-        email: '',
-        password: ''
-    });
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+    const [open, setOpen] = useState<boolean>(false);
+    const [timeLeft, setTimeLeft] = useState<number>(0);
+    const [showResend, setShowResend] = useState<boolean>(false);
+    const [verificationId, setVerificationId] = useState<string | null>(null);
+    const [phoneNumber, setPhoneNumber] = useState<string>('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const sendPhoneOtp = async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+        e.preventDefault()
+        if (phoneNumber.length !== 10) {
+            toast.error("Please enter a valid phone number")
+            return
+        }
+
+        if (timeLeft > 0 || showResend) {
+            setOpen(true)
+            return
+        }
+
+        setIsLoading(true)
+        const response = await sendOtpForLogin(phoneNumber)
+        if (response.error) {
+            toast.error(response.error)
+        } else {
+            setTimeLeft(OTP_EXPIRE_TIME)
+            setVerificationId(response.data.verificationId)
+            setOpen(true)
+        }
+        setIsLoading(false)
     }
 
-    const signIn = async (e: React.MouseEvent<HTMLButtonElement>) => {
-        e.preventDefault();
-
-    }
 
     const handleGoogleLogin = async () => {
         const { data, error } = await signInWithGoogle();
         if (error !== null) {
             toast(error)
         }
-    }   
+    }
 
 
     return (
@@ -55,12 +76,13 @@ const Auth = () => {
             <form className="space-y-4">
                 <div className="space-y-2 flex flex-col">
                     <label htmlFor="phone" className='font-bold'>Phone No</label>
-                    <Input value={formData.email} onChange={handleChange} name='phone' id="phone" placeholder="Enter your phone..." type="phone" required />
+                    <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} name='phone' id="phone" placeholder="Enter your phone..." type="phone" required />
                 </div>
-                <Button type="submit" className="w-full" onClick={signIn}>
+                <Button type="submit" className="w-full" onClick={sendPhoneOtp} disabled={isLoading}>
                     Continue <FaAngleRight />
                 </Button>
             </form>
+            <OtpDialog open={open} onOpenChange={setOpen} timeLeft={timeLeft} setTimeLeft={setTimeLeft} showResend={showResend} setShowResend={setShowResend} verificationId={verificationId} setVerificationId={setVerificationId} phoneNumber={phoneNumber} />
         </Card>
     )
 }

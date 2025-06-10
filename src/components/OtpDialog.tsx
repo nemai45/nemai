@@ -1,6 +1,6 @@
 "use client"
 
-import { sendOtp, verifyOtp } from "@/action/auth"
+import { sendOtp, sendOtpForLogin, verifyOtpAndCreateSession } from "@/action/auth"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -22,8 +22,8 @@ interface OtpDialogProps {
     verificationId: string | null
     setVerificationId: React.Dispatch<React.SetStateAction<string | null>>
     phoneNumber: string
-    isVerified: boolean
-    setIsVerified: React.Dispatch<React.SetStateAction<boolean>>
+    isVerified?: boolean
+    setIsVerified?: React.Dispatch<React.SetStateAction<boolean>>
     showResend: boolean
     setShowResend: React.Dispatch<React.SetStateAction<boolean>>
 }
@@ -33,7 +33,7 @@ export default function OtpDialog({ open, onOpenChange, timeLeft, setTimeLeft, v
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isResending, setIsResending] = useState(false)
     const timerRef = useRef<NodeJS.Timeout | null>(null)
-
+    
     useEffect(() => {
         if (timeLeft <= 0) return
 
@@ -58,15 +58,28 @@ export default function OtpDialog({ open, onOpenChange, timeLeft, setTimeLeft, v
     const resendOtp = useCallback(async () => {
         if (!verificationId || isResending || !showResend || timeLeft > 0) return
         setIsResending(true)
-        const response = await sendOtp(phoneNumber)
-        if (response.error) {
-            toast.error("Failed to send OTP")
+        if (isVerified !== undefined && setIsVerified !== undefined) {
+            const response = await sendOtp(phoneNumber)
+            if (response.error) {
+                toast.error("Failed to send OTP")
+            } else {
+                setVerificationId(response.data.verificationId)
+                setTimeLeft(OTP_EXPIRE_TIME)
+                setOtp("")
+                setShowResend(false)
+                toast.success("OTP sent successfully")
+            }
         } else {
-            setVerificationId(response.data.verificationId)
-            setTimeLeft(OTP_EXPIRE_TIME)
-            setOtp("")
-            setShowResend(false)
-            toast.success("OTP sent successfully")
+            const response = await sendOtpForLogin(phoneNumber)
+            if (response.error) {
+                toast.error("Failed to send OTP")
+            } else {
+                setVerificationId(response.data.verificationId)
+                setTimeLeft(OTP_EXPIRE_TIME)
+                setOtp("")
+                setShowResend(false)
+                toast.success("OTP sent successfully")
+            }
         }
         setIsResending(false)
     }, [phoneNumber, verificationId, isResending, showResend, timeLeft, setVerificationId, setTimeLeft])
@@ -81,15 +94,19 @@ export default function OtpDialog({ open, onOpenChange, timeLeft, setTimeLeft, v
     const verify = useCallback(async () => {
         if (!verificationId || otp.length !== 4 || isSubmitting) return
         setIsSubmitting(true)
-        const response = await verifyOtp(phoneNumber, verificationId, otp)
-        if (response.error) {
-            toast.error(response.error)
-        } else {
-            if (response.message !== "SUCCESS") {
-                toast.error("Invalid OTP!!")
-                setIsVerified(false)
+        if (isVerified !== undefined && setIsVerified !== undefined) {
+            const response = await verifyOtpAndCreateSession(phoneNumber, verificationId, otp, false)
+            if (response.error) {
+                toast.error(response.error)
             } else {
                 setIsVerified(true)
+                onOpenChange(false)
+            }
+        } else {
+            const response = await verifyOtpAndCreateSession(phoneNumber, verificationId, otp, true)
+            if (response.error) {
+                toast.error(response.error)
+            } else {
                 onOpenChange(false)
             }
         }

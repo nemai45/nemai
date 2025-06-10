@@ -6,9 +6,11 @@ import {
   BlockedDate,
   Booking,
   CombinedInfo,
+  Result,
   Service
 } from "@/lib/type";
 import { timeToMinutes } from "@/lib/utils";
+import supabaseAdmin from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -1341,4 +1343,24 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
   return {
     error: null,
   };
+};
+
+export const deleteArtist = async (artistId: string): Promise<Result<string>> => {
+  const supabase = await createClient();
+  const { data, error: DBError } = await supabase.auth.getUser();
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if (role !== "admin") {
+    return { error: "User is not an admin" };
+  }
+  const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(artistId);
+  if (authError) {
+    return { error: authError.message };
+  }
+  return { data: "Artist deleted successfully" };
 };
