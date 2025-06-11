@@ -243,7 +243,7 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
                                 </div>
                             </div>
 
-                            {role === "artist" || role === "admin" && (
+                            {(role === "artist" || role === "admin") && (
                                 <>
                                     <Separator />
                                     <div className="space-y-4">

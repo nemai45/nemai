@@ -202,7 +202,9 @@ export async function verifyOtpAndCreateSession(
     console.error("verifyOtpAndCreateSession error:", error);
     return { error: error.message };
   }
-  redirect("/")
+  if (isLogin) {
+    redirect("/");
+  }
 }
 
 export async function signInWithGoogle() {
