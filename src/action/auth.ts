@@ -205,6 +205,7 @@ export async function verifyOtpAndCreateSession(
   if (isLogin) {
     redirect("/");
   }
+  return { success: "OTP verified successfully" };
 }
 
 export async function signInWithGoogle() {
