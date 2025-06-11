@@ -43,6 +43,7 @@ const Profile = async ({ id }: ProfileProps) => {
                 handleSubmit={updateUser}
                 personalInfo={result.data.personal}
                 professionalInfo={result.data.professional}
+                id={id}
             />
         </div>
     )

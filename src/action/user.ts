@@ -104,7 +104,8 @@ export const onBoardUser = async (data: CombinedInfo, logo: File | null) => {
   };
 };
 
-export const updateUser = async (data: CombinedInfo, logo: File | null) => {
+export const updateUser = async (data: CombinedInfo, logo: File | null, id?: string ) => {
+  console.log(id)
   const supabase = await createClient();
   const {
     data: { user },
@@ -128,15 +129,14 @@ export const updateUser = async (data: CombinedInfo, logo: File | null) => {
     .update({
       first_name: personal.first_name,
       last_name: personal.last_name,
-      phone_no: personal.phone_no,
     })
-    .eq("id", user.id);
+    .eq("id", id || user.id);
   if (DBError) {
     return {
       error: DBError.message,
     };
   }
-  if (role === "artist" && professional) {
+  if ((role === "artist" || role === "admin") && professional) {
     if (!professional.is_work_from_home && !professional.is_available_at_client_home) {
       return {
         error: "At least one of the options work from studio or available at client home must be selected",
@@ -181,7 +181,7 @@ export const updateUser = async (data: CombinedInfo, logo: File | null) => {
         is_work_from_home: professional.is_work_from_home,
         is_available_at_client_home: professional.is_available_at_client_home,
       })
-      .eq("id", user.id);
+      .eq("id", id || user.id);
     if (DBError) {
       return {
         error: DBError.message,
@@ -194,7 +194,7 @@ export const updateUser = async (data: CombinedInfo, logo: File | null) => {
   };
 };
 
-export const addArtistService = async (service: Service) => {
+export const addArtistService = async (service: Service, id?: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -211,9 +211,9 @@ export const addArtistService = async (service: Service) => {
     };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
+  if (role !== "artist" && role !== "admin") {
     return {
-      error: "User is not an artist",
+      error: "User is not an artist or admin",
     };
   }
 
@@ -224,7 +224,7 @@ export const addArtistService = async (service: Service) => {
       description: service.description,
       price: service.price,
       duration: service.duration,
-      artist_id: user.id,
+      artist_id: id || user.id,
     })
     .select()
     .single();
@@ -255,7 +255,7 @@ export const addArtistService = async (service: Service) => {
   };
 };
 
-export const updateArtistService = async (service: Service) => {
+export const updateArtistService = async (service: Service, id?: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -272,9 +272,9 @@ export const updateArtistService = async (service: Service) => {
     };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
+  if (role !== "artist" && role !== "admin") {
     return {
-      error: "User is not an artist",
+      error: "User is not an artist or admin",
     };
   }
   if (!service.id) {
@@ -293,7 +293,8 @@ export const updateArtistService = async (service: Service) => {
       error: serviceError.message,
     };
   }
-  if (serviceData.artist_id !== user.id) {
+  console.log(serviceData.artist_id, user.id, id)
+  if (serviceData.artist_id !== user.id && serviceData.artist_id !== id) {
     return {
       error: "You are not authorized to update this service",
     };
@@ -363,7 +364,7 @@ export const updateArtistService = async (service: Service) => {
   };
 };
 
-export const deleteArtistService = async (serviceId: string) => {
+export const deleteArtistService = async (serviceId: string, id?: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -380,9 +381,9 @@ export const deleteArtistService = async (serviceId: string) => {
     };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
+  if (role !== "artist" && role !== "admin") {
     return {
-      error: "User is not an artist",
+      error: "User is not an artist or admin",
     };
   }
 
@@ -396,7 +397,7 @@ export const deleteArtistService = async (serviceId: string) => {
       error: serviceError.message,
     };
   }
-  if (serviceData.artist_id !== user.id) {
+  if (serviceData.artist_id !== user.id && serviceData.artist_id !== id) {
     return {
       error: "You are not authorized to delete this service",
     };
@@ -417,7 +418,7 @@ export const deleteArtistService = async (serviceId: string) => {
   };
 };
 
-export const createAlbum = async (name: string) => {
+export const createAlbum = async (name: string, id?: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -434,14 +435,14 @@ export const createAlbum = async (name: string) => {
     };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
+  if (role !== "artist" && role !== "admin") {
     return {
-      error: "User is not an artist",
+      error: "User is not an artist or admin",
     };
   }
   const { error: DBError } = await supabase.from("albums").insert({
     name: name,
-    artist_id: user.id,
+    artist_id: id || user.id,
   });
   if (DBError) {
     return {
@@ -454,7 +455,7 @@ export const createAlbum = async (name: string) => {
   };
 };
 
-export const deleteAlbum = async (albumId: string) => {
+export const deleteAlbum = async (albumId: string, id?: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -471,16 +472,16 @@ export const deleteAlbum = async (albumId: string) => {
     };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
+  if (role !== "artist" && role !== "admin") {
     return {
-      error: "User is not an artist",
+      error: "User is not an artist or admin",
     };
   }
   const { error: DBError } = await supabase
     .from("albums")
     .delete()
     .eq("id", albumId)
-    .eq("artist_id", user.id);
+    .eq("artist_id", id || user.id);
   if (DBError) {
     return {
       error: DBError.message,
@@ -492,7 +493,7 @@ export const deleteAlbum = async (albumId: string) => {
   };
 };
 
-export const addCoverImage = async (file: File) => {
+export const addCoverImage = async (file: File, id?: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -509,9 +510,9 @@ export const addCoverImage = async (file: File) => {
     };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
+  if (role !== "artist" && role !== "admin") {
     return {
-      error: "User is not an artist",
+      error: "User is not an artist or admin",
     };
   }
   const fileName = `${user.id}-${Date.now()}`;
@@ -525,7 +526,7 @@ export const addCoverImage = async (file: File) => {
   }
   const { error: err } = await supabase.from("cover_images").insert({
     url: data.fullPath,
-    artist_id: user.id,
+    artist_id: id || user.id,
     id: data.id,
   });
   if (err) {
@@ -539,7 +540,7 @@ export const addCoverImage = async (file: File) => {
   };
 };
 
-export const addAlbumImage = async (file: File, albumId: string) => {
+export const addAlbumImage = async (file: File, albumId: string, id?: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -556,9 +557,9 @@ export const addAlbumImage = async (file: File, albumId: string) => {
     };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
+  if (role !== "artist" && role !== "admin") {
     return {
-      error: "User is not an artist",
+      error: "User is not an artist or admin",
     };
   }
 
@@ -572,7 +573,7 @@ export const addAlbumImage = async (file: File, albumId: string) => {
       error: albumError.message,
     };
   }
-  if (albumData.artist_id !== user.id) {
+  if (albumData.artist_id !== user.id && albumData.artist_id !== id) {
     return {
       error: "You are not authorized to add images to this album",
     };
@@ -620,7 +621,8 @@ export const addAlbumImage = async (file: File, albumId: string) => {
 export const deleteAlbumImage = async (
   imageId: string,
   albumId: string,
-  fullPath: string
+  fullPath: string,
+  id?: string
 ) => {
   const supabase = await createClient();
   const {
@@ -638,9 +640,9 @@ export const deleteAlbumImage = async (
     };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
+  if (role !== "artist" && role !== "admin") {
     return {
-      error: "User is not an artist",
+      error: "User is not an artist or admin",
     };
   }
 
@@ -654,7 +656,7 @@ export const deleteAlbumImage = async (
       error: albumError.message,
     };
   }
-  if (albumData.artist_id !== user.id) {
+  if (albumData.artist_id !== user.id && albumData.artist_id !== id) {
     return {
       error: "You are not authorized to delete images from this album",
     };
@@ -728,7 +730,7 @@ export const deleteAlbumImage = async (
   };
 };
 
-export const deleteCoverImage = async (imageId: string, fullPath: string) => {
+export const deleteCoverImage = async (imageId: string, fullPath: string, id?: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -745,9 +747,9 @@ export const deleteCoverImage = async (imageId: string, fullPath: string) => {
     };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
+  if (role !== "artist" && role !== "admin") {
     return {
-      error: "User is not an artist",
+      error: "User is not an artist or admin",
     };
   }
 
@@ -761,7 +763,7 @@ export const deleteCoverImage = async (imageId: string, fullPath: string) => {
       error: coverImageError.message,
     };
   }
-  if (coverImageData.artist_id !== user.id) {
+  if (coverImageData.artist_id !== user.id && coverImageData.artist_id !== id) {
     return {
       error: "You are not authorized to delete this cover image",
     };
@@ -790,7 +792,8 @@ export const deleteCoverImage = async (imageId: string, fullPath: string) => {
   };
 };
 
-export const addAvailability = async (data: Availability) => {
+export const addAvailability = async (data: Availability, id?: string) => {
+  console.log(id)
   const supabase = await createClient();
   const {
     data: { user },
@@ -807,9 +810,9 @@ export const addAvailability = async (data: Availability) => {
     };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
+  if (role !== "artist" && role !== "admin") {
     return {
-      error: "User is not an artist",
+      error: "User is not an artist or admin",
     };
   }
 
@@ -828,10 +831,10 @@ export const addAvailability = async (data: Availability) => {
   const { data: existingSlots, error: fetchError } = await supabase
     .from("availability")
     .select("*")
-    .eq("artist_id", user.id)
+    .eq("artist_id", id || user.id)
     .eq("day", data.dayOfWeek)
-    .not("start_time", "gt", timeToMinutes(data.endTime))
-    .not("end_time", "lt", timeToMinutes(data.startTime));
+    .not("start_time", "gte", timeToMinutes(data.endTime))
+    .not("end_time", "lte", timeToMinutes(data.startTime));
 
   if (fetchError) {
     console.log(fetchError);
@@ -850,6 +853,7 @@ export const addAvailability = async (data: Availability) => {
     .from("availability")
     .insert({
       day: data.dayOfWeek,
+      artist_id: id || user.id,
       start_time: timeToMinutes(data.startTime),
       end_time: timeToMinutes(data.endTime),
     })
@@ -868,7 +872,7 @@ export const addAvailability = async (data: Availability) => {
   };
 };
 
-export const deleteAvailability = async (id: string) => {
+export const deleteAvailability = async (id: string, artistId?: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -885,9 +889,9 @@ export const deleteAvailability = async (id: string) => {
     };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
+  if (role !== "artist" && role !== "admin") {
     return {
-      error: "User is not an artist",
+      error: "User is not an artist or admin",
     };
   }
 
@@ -907,7 +911,7 @@ export const deleteAvailability = async (id: string) => {
       error: availabilityError.message,
     };
   }
-  if (availabilityData.artist_id !== user.id) {
+  if (availabilityData.artist_id !== user.id && availabilityData.artist_id !== artistId) {
     return {
       error: "You are not authorized to delete this availability",
     };
@@ -927,7 +931,7 @@ export const deleteAvailability = async (id: string) => {
   };
 };
 
-export const addBlockedDate = async (data: BlockedDate) => {
+export const addBlockedDate = async (data: BlockedDate, id?: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -944,9 +948,9 @@ export const addBlockedDate = async (data: BlockedDate) => {
     };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
+  if (role !== "artist" && role !== "admin") {
     return {
-      error: "User is not an artist",
+      error: "User is not an artist or admin",
     };
   }
 
@@ -968,7 +972,7 @@ export const addBlockedDate = async (data: BlockedDate) => {
   const { data: availabilityData, error: availError } = await supabase
     .from("availability")
     .select("*")
-    .eq("artist_id", user.id)
+    .eq("artist_id", id || user.id)
     .eq("day", day)
     .lte("start_time", timeToMinutes(data.start_time))
     .gte("end_time", timeToMinutes(data.end_time));
@@ -989,7 +993,7 @@ export const addBlockedDate = async (data: BlockedDate) => {
     .from("order")
     .select("start_time, services!inner(duration, artist_id)")
     .eq("date", data.date)
-    .eq("services.artist_id", user.id);
+    .eq("services.artist_id", id || user.id);
 
   if (bookingsError) {
     return {
@@ -1000,7 +1004,7 @@ export const addBlockedDate = async (data: BlockedDate) => {
   const { data: blockedData, error: blockedError } = await supabase
     .from("blocked_date")
     .select("*")
-    .eq("artist_id", user.id)
+    .eq("artist_id", id || user.id)
     .eq("date", data.date)
     .not("end_time", "lt", timeToMinutes(data.start_time))
     .not("start_time", "gt", timeToMinutes(data.end_time));
@@ -1017,7 +1021,7 @@ export const addBlockedDate = async (data: BlockedDate) => {
   const { data: no_of_artists, error: no_of_artists_error } = await supabase
     .from("artist_profile")
     .select("no_of_artists")
-    .eq("id", user.id)
+    .eq("id", id || user.id)
     .single();
 
   if (no_of_artists_error) {
@@ -1073,6 +1077,7 @@ export const addBlockedDate = async (data: BlockedDate) => {
     .from("blocked_date")
     .insert({
       date: data.date,
+      artist_id: id || user.id,
       start_time: timeToMinutes(data.start_time),
       end_time: timeToMinutes(data.end_time),
       no_of_artist: data.no_of_artist,
@@ -1090,7 +1095,7 @@ export const addBlockedDate = async (data: BlockedDate) => {
   };
 };
 
-export const deleteBlockedDate = async (id: string) => {
+export const deleteBlockedDate = async (id: string, artistId?: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -1107,9 +1112,9 @@ export const deleteBlockedDate = async (id: string) => {
     };
   }
   const role = await getUserRole();
-  if (role !== "artist") {
+  if (role !== "artist" && role !== "admin") {
     return {
-      error: "User is not an artist",
+      error: "User is not an artist or admin",
     };
   }
 
@@ -1129,7 +1134,7 @@ export const deleteBlockedDate = async (id: string) => {
       error: blockedDateError.message,
     };
   }
-  if (blockedDateData.artist_id !== user.id) {
+  if (blockedDateData.artist_id !== user.id && blockedDateData.artist_id !== artistId ) {
     return {
       error: "You are not authorized to delete this blocked date",
     };

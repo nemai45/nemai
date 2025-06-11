@@ -43,9 +43,8 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
     start_time: minutesToTime(item.start_time),
     end_time: minutesToTime(item.end_time),
   }))
-  console.log(noOfArtists)
   return (
-    <AvailabilityManager bookings={bookingsData} blockedDates={blockedDates} availability={availability} maxClients={noOfArtists} />
+    <AvailabilityManager artistId={id} bookings={bookingsData} blockedDates={blockedDates} availability={availability} maxClients={noOfArtists} />
   )
 }
 

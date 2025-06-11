@@ -39,7 +39,7 @@ const layout = async ({
     },
     {
       title: "Customers",
-      path: "/admin/customers",
+      path: "/admin/users",
       icon: "User",
     },
     {

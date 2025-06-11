@@ -30,19 +30,20 @@ interface ProfileCardProps {
     professionalInfo: ProfessionalInfo | null
     areas: { id: number, name: string }[]
     isOnBoarding?: boolean
-    handleSubmit: (data: CombinedInfo, logo: File | null) => Promise<{
+    handleSubmit: (data: CombinedInfo, logo: File | null, id?: string) => Promise<{
         error: string;
         logo?: undefined;
     } | {
         logo: string | null | undefined;
         error: null;
     }>
+    id?: string
 }
 
 const SUPABASE_BUCKET_URL_PREFIX = "https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/";
 
 
-const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, handleSubmit, areas, isOnBoarding = false }) => {
+const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, handleSubmit, areas, isOnBoarding = false, id }) => {
     const [logo, setLogo] = useState<File | null>(null);
     const [logoUrl, setLogoUrl] = useState<string | null>(professionalInfo?.logo ? `${SUPABASE_BUCKET_URL_PREFIX}${professionalInfo.logo}` : null);
 
@@ -103,7 +104,7 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
             setLoading(false);
             return;
         }
-        const { logo: newLogo, error: submitError } = await handleSubmit(data, logo);
+        const { logo: newLogo, error: submitError } = await handleSubmit(data, logo, id);
         if (submitError) {
             toast.error(submitError);
             setLoading(false);

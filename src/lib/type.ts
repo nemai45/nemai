@@ -232,3 +232,13 @@ export type MonthlyIncome = {
   addOnIncome: number;
   total: number;
 };
+
+export interface User {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+  phone_no: string | null;
+  role: string;
+  created_at: string;
+}

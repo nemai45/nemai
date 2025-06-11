@@ -17,9 +17,10 @@ import NailLoader from "../NailLoader"
 
 interface ServiceManagerProps {
   services: Service[]
+  id?: string
 }
 
-const ServiceManager: FC<ServiceManagerProps> = ({ services }) => {
+const ServiceManager: FC<ServiceManagerProps> = ({ services, id }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingService, setEditingService] = useState<Service | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -62,7 +63,7 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services }) => {
   const handleDeleteService = async (serviceId: string) => {
     setIsLoading(true)
     if (!confirm("Are you sure you want to delete this service?")) return
-    const { error } = await deleteArtistService(serviceId)
+    const { error } = await deleteArtistService(serviceId, id)
     if (error) {
       toast.error("Error deleting service: " + error)
       setIsLoading(false)
@@ -79,7 +80,7 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services }) => {
     }
     if (!editingService) {
       setIsLoading(true)
-      const { error } = await addArtistService(data)
+      const { error } = await addArtistService(data, id)
       if (error) {
         toast.error("Error adding service: " + error)
         setIsLoading(false)
@@ -100,7 +101,7 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services }) => {
       const { error } = await updateArtistService({
         ...data,
         id: editingService.id,
-      })
+      }, id)
       if (error) {
         toast.error("Error updating service: " + error)
         setIsLoading(false)

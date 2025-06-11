@@ -16,6 +16,7 @@ import {
   professionalInfoSchema,
   Result,
   Service,
+  User,
 } from "./type";
 import { endOfMonth, format, startOfMonth, subMonths } from "date-fns";
 
@@ -168,9 +169,20 @@ export const getCoverImages = async (
 
 export const getAlbumImages = async (
   albumId: string,
-  artistId: string
-): Promise<Result<Image[]>> => {
+): Promise<Result<{images: Image[], artistId: string}>> => {
   const supabase = await createClient();
+  const { data: album, error: albumError } = await supabase
+    .from("albums")
+    .select("artist_id")
+    .eq("id", albumId)
+    .single();
+  if (albumError) {
+    return { error: albumError.message };
+  }
+  if (!album) {
+    return { error: "Album not found" };
+  }
+  const artistId = album.artist_id;
   const { data, error: DBError } = await supabase
     .from("images")
     .select("id, url")
@@ -187,7 +199,10 @@ export const getAlbumImages = async (
   }));
 
   return {
-    data: dataWithArtistId,
+    data: {
+      images: dataWithArtistId,
+      artistId: artistId,
+    },
   };
 };
 
@@ -766,3 +781,25 @@ export const getImage = async (imageId: string): Promise<Result<string>> => {
   return { data: data.url };
 };
 
+export const getUsers = async (): Promise<Result<User[]>> => {
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!user) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if (role !== "admin") {
+    return { error: "User is not an admin" };
+  }
+  const { data, error: DBError } = await supabase
+    .from("users")
+    .select("id, first_name, last_name, email, phone_no, role, created_at")
+    .eq("role", "customer");
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  return { data: data };
+}

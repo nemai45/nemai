@@ -25,13 +25,15 @@ interface AvailabilityManagerProps {
   maxClients: number
   blockedDates: BlockedDate[]
   bookings: BookingInfo[]
+  artistId?: string
 }
 
 const AvailabilityManager = ({
   availability,
   maxClients,
   blockedDates: initialBlockedDates,
-  bookings
+  bookings,
+  artistId
 }: AvailabilityManagerProps) => {
   const [weeklyAvailability, setWeeklyAvailability] = useState<Availability[]>(availability)
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>(initialBlockedDates)
@@ -85,7 +87,7 @@ const AvailabilityManager = ({
       endTime: ""
     })
 
-    const { data, error } = await addAvailability(newTimeSlot)
+    const { data, error } = await addAvailability(newTimeSlot, artistId)
     if (error) {
       toast.error(error)
       setNewTimeSlot({
@@ -103,7 +105,7 @@ const AvailabilityManager = ({
 
   const handleRemoveTimeSlot = async (id: string) => {
     setWeeklyAvailability(weeklyAvailability.filter((slot) => slot.id !== id))
-    const { error } = await deleteAvailability(id)
+    const { error } = await deleteAvailability(id, artistId)
     if (error) {
       toast.error(error)
       const removedSlot = availability.find(slot => slot.id === id)
@@ -372,7 +374,7 @@ const AvailabilityManager = ({
     setBlockedTimeSlot({ startTime: "", endTime: "" })
     setNumberOfArtists("")
 
-    const { data, error } = await addBlockedDate(newBlockedDate)
+    const { data, error } = await addBlockedDate(newBlockedDate, artistId)
 
     if (error) {
       toast.error(error)
@@ -390,7 +392,7 @@ const AvailabilityManager = ({
 
   const handleUnblockDate = async (id: string) => {
     setBlockedDates(blockedDates.filter((date) => date.id !== id))
-    const { error } = await deleteBlockedDate(id)
+    const { error } = await deleteBlockedDate(id, artistId)
 
     if (error) {
       toast.error(error)

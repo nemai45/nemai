@@ -68,7 +68,7 @@ const PortfolioManager = ({ id, role, albums, coverImageCount, logo }: Portfolio
 
   const handleCreateAlbum = async (data: Omit<Album, "id">) => {
     setIsLoading(true)
-    const { error } = await createAlbum(data.name);
+    const { error } = await createAlbum(data.name, id);
     if (error) {
       toast.error(error);
     } else {
@@ -105,6 +105,7 @@ const PortfolioManager = ({ id, role, albums, coverImageCount, logo }: Portfolio
         onAlbumClick={handleOpenAlbumView}
         isDeletable={true}
         logo={logo}
+        id={id}
       />
 
 

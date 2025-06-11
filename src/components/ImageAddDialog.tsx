@@ -1,5 +1,5 @@
 import { addAlbumImage, addCoverImage } from '@/action/user';
-import { ImageIcon, Trash } from 'lucide-react';
+import { IdCard, ImageIcon, Trash } from 'lucide-react';
 import Image from 'next/image';
 import React, { FC, useState } from 'react';
 import { toast } from 'sonner';
@@ -12,8 +12,9 @@ interface ImageAddDialogProps {
     setIsAddingImage: (isAddingImage: boolean) => void;
     albumId: string;
     isCoverImage: boolean;
+    id: string;
 }
-const ImageAddDialog: FC<ImageAddDialogProps> = ({ isAddingImage, setIsAddingImage, albumId, isCoverImage }) => {
+const ImageAddDialog: FC<ImageAddDialogProps> = ({ isAddingImage, setIsAddingImage, albumId, isCoverImage, id }) => {
     const [isUploading, setIsUploading] = useState(false);
     const [croppingImageSrc, setCroppingImageSrc] = useState<string | null>(null);
     const [croppingType, setCroppingType] = useState<"cover" | "portfolio" | null>(null);
@@ -53,14 +54,14 @@ const ImageAddDialog: FC<ImageAddDialogProps> = ({ isAddingImage, setIsAddingIma
         }
         setIsUploading(true);
         if (isCoverImage) {
-            const { error } = await addCoverImage(selectedFile);
+            const { error } = await addCoverImage(selectedFile, id);
             if (error) {
                 toast.error(error);
             } else {
                 toast.success("Cover image uploaded successfully!");
             }
         } else {
-            const { error } = await addAlbumImage(selectedFile, albumId);
+            const { error } = await addAlbumImage(selectedFile, albumId, id);
             if (error) {
                 toast.error(error);
             } else {

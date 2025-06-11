@@ -21,9 +21,10 @@ interface AlbumGridProps {
   onAlbumClick: (albumId: string) => void;
   isDeletable: boolean;
   logo: string | null;
+  id?: string;
 }
 
-const AlbumGrid = ({ albums, onAlbumClick, isDeletable, logo }: AlbumGridProps) => {
+const AlbumGrid = ({ albums, onAlbumClick, isDeletable, logo, id }: AlbumGridProps) => {
   const [isLoading, setIsLoading] = useState(false);
   if (isLoading) return <NailLoader />
   return (
@@ -64,7 +65,7 @@ const AlbumGrid = ({ albums, onAlbumClick, isDeletable, logo }: AlbumGridProps) 
                       onClick={async (e) => {
                         e.stopPropagation();  
                         setIsLoading(true)
-                        const { error } = await deleteAlbum(album.id);
+                        const { error } = await deleteAlbum(album.id, id);
                         if (error) {
                           toast.error(error);
                         } else {

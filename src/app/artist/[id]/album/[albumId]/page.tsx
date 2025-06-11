@@ -18,6 +18,7 @@ const page = async ({ params }: { params: Promise<{ id: string, albumId: string 
         return redirect("/login");
     }
     let items: Image[];
+    let artistId: string;
     if (albumId === "cover-images") {
         const result = await getCoverImages(id);
         if ('error' in result) {
@@ -25,16 +26,18 @@ const page = async ({ params }: { params: Promise<{ id: string, albumId: string 
             return <Error error={result.error} />
         }
         items = result.data;
+        artistId = id;
     } else {
-        const result = await getAlbumImages(albumId, id);
+        const result = await getAlbumImages(albumId);
         if ('error' in result) {
             console.error(result.error);
             return <Error error={result.error} />
         }
-        items = result.data;
+        items = result.data.images;
+        artistId = result.data.artistId;
     }
     return (
-        <AlbumView albumId={albumId} items={items} />
+        <AlbumView artistId={artistId} albumId={albumId} items={items} />
     )
 }
 

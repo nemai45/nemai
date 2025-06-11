@@ -24,14 +24,16 @@ import NailLoader from "./NailLoader";
 interface AlbumViewProps {
   albumId: string;
   items: ImageType[];
+  artistId: string;
 }
 
 const AlbumView = ({
   albumId,
   items,
+  artistId
 }: AlbumViewProps) => {
   const router = useRouter();
-  const { user, loading, error } = useUser();
+  const { user, loading, error, role } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [isAddingImage, setIsAddingImage] = useState(false);
 
@@ -50,14 +52,14 @@ const AlbumView = ({
     }
     setIsLoading(true)
     if (albumId === "cover-images") {
-      const { error } = await deleteCoverImage(imageId, fullPath);
+      const { error } = await deleteCoverImage(imageId, fullPath, artistId);
       if (error) {
         toast.error(error);
       } else {
         toast.success("Image deleted successfully");
       }
     } else {
-      const { error } = await deleteAlbumImage(imageId, albumId, fullPath);
+      const { error } = await deleteAlbumImage(imageId, albumId, fullPath, artistId);
       if (error) {
         toast.error(error);
       } else {
@@ -68,7 +70,6 @@ const AlbumView = ({
   }
 
   if (isLoading) return <NailLoader />
-
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
@@ -79,12 +80,16 @@ const AlbumView = ({
           <p className="text-muted-foreground ml-auto">
             {items.length} {items.length === 1 ? "photo" : "photos"}
           </p>
-          <Button onClick={() => setIsAddingImage(true)}>
-            Add Image
-          </Button>
+          {
+            ((role === "artist" && artistId === user.id) || role === "admin") && (
+              <Button onClick={() => setIsAddingImage(true)}>
+                Add Image
+              </Button>
+            )
+          }
         </>
       </div>
-      {isAddingImage && <ImageAddDialog isCoverImage={albumId === "cover-images"} isAddingImage={isAddingImage} setIsAddingImage={setIsAddingImage} albumId={albumId} />}
+      {isAddingImage && <ImageAddDialog id={artistId} isCoverImage={albumId === "cover-images"} isAddingImage={isAddingImage} setIsAddingImage={setIsAddingImage} albumId={albumId} />}
 
 
       {items.length > 0 ? (
@@ -98,7 +103,7 @@ const AlbumView = ({
                 width={100}
                 height={100}
               />
-              {item.artist_id === user.id && (
+              {((item.artist_id === user.id && role === "artist") || role === "admin") && (
                 <>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

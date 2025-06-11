@@ -20,7 +20,7 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
   }
 
   return (
-    <ServiceManager services={result.data} />
+    <ServiceManager services={result.data} id={id} />
   )
 }
 
