@@ -461,7 +461,7 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
                 </form>
             </Form>
             <ImageCropperModal
-
+                cropType="logo"
                 isOpen={showCropper}
                 onClose={() => {
                     setShowCropper(false);

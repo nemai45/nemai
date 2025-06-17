@@ -9,7 +9,7 @@ import {
   Result,
   Service
 } from "@/lib/type";
-import { timeToMinutes } from "@/lib/utils";
+import { timeToMinutes, uploadToCloudinary } from "@/lib/utils";
 import supabaseAdmin from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -493,7 +493,7 @@ export const deleteAlbum = async (albumId: string, id?: string) => {
   };
 };
 
-export const addCoverImage = async (file: File, id?: string) => {
+export const addCoverImage = async (formData: FormData, id?: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -515,19 +515,11 @@ export const addCoverImage = async (file: File, id?: string) => {
       error: "User is not an artist or admin",
     };
   }
-  const fileName = `${user.id}-${Date.now()}`;
-  const { data, error: DBError } = await supabase.storage
-    .from("images")
-    .upload(fileName, file);
-  if (DBError) {
-    return {
-      error: DBError.message,
-    };
-  }
+  const { secure_url, public_id } = await uploadToCloudinary(formData);
+
   const { error: err } = await supabase.from("cover_images").insert({
-    url: data.fullPath,
+    url: secure_url,
     artist_id: id || user.id,
-    id: data.id,
   });
   if (err) {
     return {
@@ -540,7 +532,7 @@ export const addCoverImage = async (file: File, id?: string) => {
   };
 };
 
-export const addAlbumImage = async (file: File, albumId: string, id?: string) => {
+export const addAlbumImage = async (formData: FormData, albumId: string, id?: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -579,18 +571,10 @@ export const addAlbumImage = async (file: File, albumId: string, id?: string) =>
     };
   }
 
-  const fileName = `${user.id}-${Date.now()}`;
-  const { data, error: DBError } = await supabase.storage
-    .from("images")
-    .upload(fileName, file);
-  if (DBError) {
-    return {
-      error: DBError.message,
-    };
-  }
+  const { secure_url, public_id } = await uploadToCloudinary(formData);
 
   const { error: err } = await supabase.from("images").insert({
-    url: data.fullPath,
+    url: secure_url,
     album_id: albumId,
   });
   if (err) {
@@ -602,7 +586,7 @@ export const addAlbumImage = async (file: File, albumId: string, id?: string) =>
   const { error: coverImageError } = await supabase
     .from("albums")
     .update({
-      cover_image: data.fullPath,
+      cover_image: secure_url,
     })
     .eq("id", albumId);
 

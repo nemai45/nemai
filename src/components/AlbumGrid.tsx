@@ -38,11 +38,11 @@ const AlbumGrid = ({ albums, onAlbumClick, isDeletable, logo, id }: AlbumGridPro
           <CardContent className="p-0">
             <div className="relative aspect-square overflow-hidden">
               <Image
-                src={album.cover_image ? `https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${album.cover_image}` : logo ? `https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${logo}` : "/hero.jpg"}
+                src={album.cover_image ? (album.cover_image.startsWith("images/") ? `https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${album.cover_image}` : album.cover_image) : logo ? `https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${logo}` : "/hero.jpg"}
                 width={100}
                 height={100}
                 alt={album.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                className="w-full h-full group-hover:scale-105 transition-transform duration-300"
               />
               {isDeletable && (
                 <>

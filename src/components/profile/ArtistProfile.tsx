@@ -39,8 +39,8 @@ const ArtistProfile = ({ artistProfile }: ArtistProfileProps) => {
               {artistProfile.cover_images.map((item) => (
                 <CarouselItem key={item.id}>
                   <div className="relative aspect-[2.5/1] rounded-xl overflow-hidden">
-                    <Image
-                      src={`https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${item.url}` || "/placeholder.svg"}
+                    <img
+                      src={item.url.startsWith("images/") ? `https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${item.url}` : item.url || "/placeholder.svg"}
                       alt={"Cover image"}
                       className="w-full h-full"
                       width={100}

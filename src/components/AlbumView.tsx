@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import Error from "./Error";
 import ImageAddDialog from "./ImageAddDialog";
 import NailLoader from "./NailLoader";
+import { CldImage } from "next-cloudinary";
 
 interface AlbumViewProps {
   albumId: string;
@@ -89,15 +90,35 @@ const AlbumView = ({
           }
         </>
       </div>
-      {isAddingImage && <ImageAddDialog id={artistId} isCoverImage={albumId === "cover-images"} isAddingImage={isAddingImage} setIsAddingImage={setIsAddingImage} albumId={albumId} />}
+      {isAddingImage && <ImageAddDialog id={artistId} imageType={albumId === "cover-images" ? "cover" : "portfolio"} isAddingImage={isAddingImage} setIsAddingImage={setIsAddingImage} albumId={albumId} />}
 
 
       {items.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
           {items.map((item) => (
             <Link onClick={(e) => e.stopPropagation()} key={item.id} href={`/image/${item.id}`} className="relative overflow-hidden">
-              <Image
-                src={`https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${item.url}` || "/placeholder.svg"}
+              {/* {
+                item.url.startsWith("images/") ? (
+                  <Image
+                    src={`https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${item.url}`}
+                    alt={item.url || "Image"}
+                    className="w-full h-full"
+                    width={100}
+                    height={100}
+                    quality={100}
+                  />
+                ) : (
+                  <CldImage
+                    src={item.url}
+                    alt={item.url || "Image"}
+                    className="w-full h-full"
+                    width={100}
+                    height={100}
+                  />
+                )
+              } */}
+              <img
+                src={item.url.startsWith("images/") ? `https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${item.url}` : item.url}
                 alt={item.url || "Image"}
                 className="w-full h-full"
                 width={100}

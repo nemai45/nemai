@@ -64,66 +64,78 @@ export const timeToMinutes = (time: string) => {
 }
 
 
-export const createImage = (url: string): Promise<HTMLImageElement> =>
+export const uploadToCloudinary = async (
+  formData: FormData,
+): Promise<{
+  secure_url: string;
+  public_id: string;
+}> => {
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+    {
+      method: 'POST',
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    console.log(response);
+    throw new Error('Failed to upload image to Cloudinary');
+  }
+
+  return response.json();
+};
+
+
+const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const image = new Image();
     image.addEventListener('load', () => resolve(image));
-    image.addEventListener('error', (error) => reject(error));
-    image.setAttribute('crossOrigin', 'anonymous'); // needed to avoid cross-origin issues
+    image.addEventListener('error', error => reject(error));
+    image.setAttribute('crossOrigin', 'anonymous');
     image.src = url;
   });
 
-export default async function getCroppedImg(
+export const getCroppedImg = async (
   imageSrc: string,
-  pixelCrop: Area
-): Promise<Blob | null> {
+  pixelCrop: Area,
+  fileName = 'cropped.jpg',
+  quality = 0.9
+): Promise<File> => {
   const image = await createImage(imageSrc);
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
 
   if (!ctx) {
-    return null;
+    throw new Error('Could not get canvas context');
   }
 
-  const maxSize = Math.max(image.width, image.height);
-  const safeArea = 2 * ((maxSize / 2) * Math.sqrt(2));
-
-  // set each dimensions to double desired CROP_AREA_WIDTH/HEIGHT
-  canvas.width = safeArea;
-  canvas.height = safeArea;
-
-  // translate canvas context to a central location on image to allow rotating around the center.
-  ctx.translate(safeArea / 2, safeArea / 2);
-  //   ctx.rotate(getRadianAngle(rotation)); // Rotation is not used in this example
-  ctx.translate(-safeArea / 2, -safeArea / 2);
-
-  // draw rotated image and store data.
-  ctx.drawImage(
-    image,
-    safeArea / 2 - image.width * 0.5,
-    safeArea / 2 - image.height * 0.5
-  );
-
-  const data = ctx.getImageData(0, 0, safeArea, safeArea);
-
-  // set canvas width to final desired crop size - this will clear existing context
   canvas.width = pixelCrop.width;
   canvas.height = pixelCrop.height;
 
-  // paste generated rotate image with correct offsets for x, y crop values.
-  ctx.putImageData(
-    data,
-    Math.round(0 - safeArea / 2 + image.width * 0.5 - pixelCrop.x),
-    Math.round(0 - safeArea / 2 + image.height * 0.5 - pixelCrop.y)
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
   );
 
-  // As Base64 string
-  // return canvas.toDataURL('image/jpeg');
-
-  // As a blob
   return new Promise((resolve) => {
-    canvas.toBlob((file) => {
-      resolve(file);
-    }, 'image/png');
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          const file = new File([blob], fileName, { type: 'image/jpeg' });
+          resolve(file);
+        }
+      },
+      'image/jpeg',
+      quality
+    );
   });
-}
+};

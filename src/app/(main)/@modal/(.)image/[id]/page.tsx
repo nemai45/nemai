@@ -12,7 +12,7 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
     <Modal>
       <div className='m-3 flex justify-center items-center'>
         <Image
-          src={`https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${result.data}` || "/placeholder.svg"}
+          src={result.data.startsWith("images/") ? `https://ftqdfdhxdtekgjxrlggp.supabase.co/storage/v1/object/public/${result.data}` : result.data || "/placeholder.svg"}
           alt={result.data || "Image"}
           className='w-full h-full object-cover'
           width={100}

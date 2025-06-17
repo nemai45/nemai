@@ -7,7 +7,11 @@ const nextConfig: NextConfig = {
       {
         hostname: "ftqdfdhxdtekgjxrlggp.supabase.co",
       },
+      {
+        hostname: "res.cloudinary.com",
+      }
     ],
+    qualities: [100],
   },
   experimental: {
     serverActions: {
