@@ -1445,7 +1445,7 @@ export const createOrder = async (booking: Booking, addOns: AddOnBooking) => {
     return { error: userError.message };
   }
   const options = {
-    amount: 30000,
+    amount: 1000,
     currency: "INR",
     receipt: `${userData.id.slice(0, 8)}_${Date.now()}`,
     notes: {

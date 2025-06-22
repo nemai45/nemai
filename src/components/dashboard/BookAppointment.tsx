@@ -241,7 +241,7 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
       }
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: 30000,
+        amount: 1000,
         currency: "INR",
         name: "NéMai",
         image: "/logo.png",
