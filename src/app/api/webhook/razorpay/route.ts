@@ -66,7 +66,10 @@ export async function POST(req: NextRequest) {
           artist_id: bookingData.services.artist_id,
         });
       if (notificationError) {
-        return { error: notificationError.message };
+        return NextResponse.json(
+          { error: notificationError.message },
+          { status: 500 }
+        );
       }
       return NextResponse.json(
         { message: "Payment captured" },

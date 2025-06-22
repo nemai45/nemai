@@ -32,7 +32,8 @@ import {
   Home,
   Search,
   BadgeInfo,
-  Bell
+  Bell,
+  XIcon
 } from "lucide-react";
 
 const iconMap = {
@@ -52,7 +53,8 @@ const iconMap = {
   Home,
   Search,
   BadgeInfo,
-  Bell
+  Bell,
+  XIcon
 };
 
 export interface SidebarMenuItemType {

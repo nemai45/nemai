@@ -53,6 +53,11 @@ const layout = async ({
       title: "Appointments",
       path: "/admin/appointments",
       icon: "Calendar",
+    },
+    {
+      title: "Canceled Bookings",
+      path: "/admin/cancel-bookings",
+      icon: "XIcon",
     }
   ];
   const artistMenuItems: SidebarMenuItemType[] = [
