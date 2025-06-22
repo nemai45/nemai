@@ -1,18 +1,16 @@
-
-import { useState } from 'react';
-import { format, fromUnixTime } from 'date-fns';
-import { ChevronDown, ChevronUp, Clock, User } from 'lucide-react';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger
 } from '@/components/ui/collapsible';
-import { cn, minutesToTime } from '@/lib/utils';
 import type { BookingInfo } from '@/lib/type';
+import { minutesToTime } from '@/lib/utils';
+import { format } from 'date-fns';
+import { ChevronDown, ChevronUp, Clock, MapPin, User } from 'lucide-react';
+import { useState } from 'react';
 
 interface BookingCardProps {
   booking: BookingInfo;
@@ -20,11 +18,11 @@ interface BookingCardProps {
 
 export function BookingCard({ booking }: BookingCardProps) {
   const [isOpen, setIsOpen] = useState(false);
-
   const formattedTime = minutesToTime(booking.start_time);
   const formattedDate = format(new Date(booking.date), 'EEEE, MMMM d, yyyy');
   const addOnTotal = booking.add_on.reduce((sum, addon) => sum + (addon.price * addon.count), 0);
   const totalPrice = booking.service.price + addOnTotal;
+
 
   const duration = booking.service.duration;
   const hours = Math.floor(duration / 60);
@@ -45,6 +43,17 @@ export function BookingCard({ booking }: BookingCardProps) {
                 <span className="text-sm font-medium">{booking.phone_no}</span>
               )}
             </div>
+            {booking.client_address ? (
+              <div className="flex items-center gap-1">
+                <MapPin className="h-3 w-3 text-primary" />
+                <span className="text-sm font-medium">{booking.client_address}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1">
+                <MapPin className="h-3 w-3 text-primary" />
+                <span className="text-sm font-medium">Artist&apos;s address</span>
+              </div>
+            )}
           </div>
           <Badge
             variant="outline"
@@ -67,7 +76,6 @@ export function BookingCard({ booking }: BookingCardProps) {
             <p className="text-xs text-muted-foreground">Service: {booking.service.price.toFixed(2)} ₹</p>
           </div>
         </div>
-
         {booking.add_on.length > 0 && (
           <Collapsible
             open={isOpen}

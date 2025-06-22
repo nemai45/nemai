@@ -198,6 +198,7 @@ export const bookingInfoSchema = z.object({
   })),
   start_time: z.number(),
   date: z.string(),
+  client_address: z.string().nullable(),
 })
 
 export type BookingInfo = z.infer<typeof bookingInfoSchema>;
@@ -209,6 +210,7 @@ export const artistSchema = z.object({
     name: z.string(),
   }),
   logo: z.string().nullable(),
+  is_featured: z.boolean(),
 })
 
 export type Artist = z.infer<typeof artistSchema>;
@@ -240,5 +242,12 @@ export interface User {
   email: string;
   phone_no: string | null;
   role: string;
+  created_at: string;
+}
+
+export interface Notification {
+  id: string;
+  message: string;
+  isRead: boolean;
   created_at: string;
 }

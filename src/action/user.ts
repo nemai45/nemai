@@ -1,5 +1,6 @@
 "use server";
 import { getUserRole } from "@/lib/get-user-role";
+import razorpay from "@/lib/razorpay";
 import {
   AddOnBooking,
   Availability,
@@ -9,9 +10,10 @@ import {
   Result,
   Service
 } from "@/lib/type";
-import { timeToMinutes, uploadToCloudinary } from "@/lib/utils";
+import { minutesToTime, timeToMinutes, uploadToCloudinary } from "@/lib/utils";
 import supabaseAdmin from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
+import { format } from "date-fns";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -975,8 +977,9 @@ export const addBlockedDate = async (data: BlockedDate, id?: string) => {
 
   const { data: bookingsData, error: bookingsError } = await supabase
     .from("order")
-    .select("start_time, services!inner(duration, artist_id)")
+    .select("start_time, services!inner(duration, artist_id), status")
     .eq("date", data.date)
+    .eq("status", "paid")
     .eq("services.artist_id", id || user.id);
 
   if (bookingsError) {
@@ -1140,7 +1143,7 @@ export const deleteBlockedDate = async (id: string, artistId?: string) => {
   };
 };
 
-export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
+export const bookService = async (booking: Booking, addOns: AddOnBooking, razorpayId: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -1162,10 +1165,20 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
       error: "User is not a customer",
     };
   }
+  const { data: userData, error: userError } = await supabase
+    .from("users")
+    .select("first_name, last_name")
+    .eq("id", user.id)
+    .single();
+  if (userError) {
+    return {  
+      error: userError.message,
+    };
+  }
 
   const { data: serviceData, error: serviceError } = await supabase
     .from("services")
-    .select("id, duration, artist_id")
+    .select("id, duration, artist_id, name")
     .eq("id", booking.service_id)
     .single();
 
@@ -1222,8 +1235,9 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
 
   const { data: bookingsData, error: bookingsError } = await supabase
     .from("order")
-    .select("start_time, services!inner(duration, artist_id)")
+    .select("start_time, services!inner(duration, artist_id), status")
     .eq("date", booking.date)
+    .eq("status", "paid")
     .eq("services.artist_id", serviceData.artist_id);
 
   if (bookingsError) {
@@ -1302,6 +1316,7 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
       date: booking.date,
       user_id: user.id,
       client_address: booking.location_type === "client_home" ? booking.address : null,
+      razorpay_id: razorpayId,
     })
     .select("id")
     .single();
@@ -1329,6 +1344,14 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking) => {
       error: res.find((r) => r?.error)?.error,
     };
   }
+
+  const { error: notificationError } = await supabase.from("notifications").insert({
+    message: `You have a new booking for ${serviceData.name} on ${format(new Date(booking.date), "dd MMM yyyy")} at ${minutesToTime(booking.start_time)} by ${userData.first_name} ${userData.last_name}.`,
+    artist_id: serviceData.artist_id,
+  });
+  if (notificationError) {
+    return { error: notificationError.message };
+  }
   return {
     error: null,
   };
@@ -1353,3 +1376,98 @@ export const deleteArtist = async (artistId: string): Promise<Result<string>> =>
   }
   return { data: "Artist deleted successfully" };
 };
+
+export const addFeaturedArtist = async (artistId: string): Promise<Result<string>> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if (role !== "admin") {
+    return { error: "User is not an admin" };
+  }
+  const { error: DBError } = await supabase.from("artist_profile").update({
+    is_featured: true,
+  }).eq("id", artistId);
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  revalidatePath("/admin/artists");
+  return { data: "Artist added to featured artists" };
+}
+
+export const removeFeaturedArtist = async (artistId: string): Promise<Result<string>> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if (role !== "admin") {
+    return { error: "User is not an admin" };
+  }
+  const { error: DBError } = await supabase.from("artist_profile").update({
+    is_featured: false,
+  }).eq("id", artistId);
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  revalidatePath("/admin/artists");
+  return { data: "Artist removed from featured artists" };
+}
+
+export const createOrder = async (booking: Booking, addOns: AddOnBooking) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if (role !== "customer") {
+    return { error: "User is not a customer" };
+  }
+  const { data: userData, error: userError } = await supabase
+    .from("users")
+    .select("id, first_name, last_name, email, phone_no")
+    .eq("id", data.user.id)
+    .single();
+  if (userError) {
+    return { error: userError.message };
+  }
+  const options = {
+    amount: 30000,
+    currency: "INR",
+    receipt: `${userData.id.slice(0, 8)}_${Date.now()}`,
+    notes: {
+      user_id: data.user.id,
+      user_name: `${userData.first_name} ${userData.last_name}`,
+    },
+  }
+  try{
+    const order = await razorpay.orders.create(options);
+    const { error: bookingError } = await bookService(booking, addOns, order.id);
+    if (bookingError) {
+      return { error: bookingError };
+    }
+    return { data: {
+      order_id: order.id,
+      name: userData.first_name + " " + userData.last_name,
+      email: userData.email,
+      phone: userData.phone_no,
+    }, error: null };
+  }catch(error: any){
+    console.log(error)
+    return { error: error.description };
+  }
+
+}

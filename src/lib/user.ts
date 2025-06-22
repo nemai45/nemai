@@ -15,6 +15,7 @@ import {
   personalInfoSchema,
   professionalInfoSchema,
   Result,
+  Notification,
   Service,
   User,
 } from "./type";
@@ -455,10 +456,12 @@ export const getBookings = async (): Promise<Result<BookingInfo[]>> => {
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, services(id, artist_profile(business_name), name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count)"
+      "id, services(id, artist_profile(business_name), name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status"
     )
     .eq("user_id", user.id)
-    .order("date");
+    .eq("status", "paid")
+    .order("date", { ascending: false })
+    .order("start_time", { ascending: true });
 
   if (DBError) {
     return { error: DBError.message };
@@ -479,6 +482,7 @@ export const getBookings = async (): Promise<Result<BookingInfo[]>> => {
     })),
     start_time: booking.start_time,
     date: booking.date,
+    client_address: booking.client_address,
   }));
 
   return { data: info };
@@ -527,9 +531,10 @@ export const getArtistBookings = async (
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count)"
+      "id, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status"
     )
     .eq("services.artist_id", artistId)
+    .eq("status", "paid")
     .gte("date", formattedDate)
     .order("date");
   if (DBError) {
@@ -551,6 +556,7 @@ export const getArtistBookings = async (
     })),
     start_time: booking.start_time,
     date: booking.date,
+    client_address: booking.client_address,
   }));
   return { data: info };
 };
@@ -576,9 +582,10 @@ export const getPastBookings = async (): Promise<Result<BookingInfo[]>> => {
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count)"
+      "id, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status"
     )
     .eq("services.artist_id", user.id)
+    .eq("status", "paid")
     .lt("date", formattedDate);
   if (DBError) {
     return { error: DBError.message };
@@ -599,6 +606,7 @@ export const getPastBookings = async (): Promise<Result<BookingInfo[]>> => {
     })),
     start_time: booking.start_time,
     date: booking.date,
+    client_address: booking.client_address,
   }));
   return { data: info };
 };
@@ -618,10 +626,10 @@ export const getArtists = async (): Promise<Result<Artist[]>> => {
   const role = await getUserRole();
   if (role !== "customer" && role !== "admin") {
     return { error: "User is not a customer or admin" };
-  }
+  } 
   const { data, error: DBError } = await supabase
     .from("artist_profile")
-    .select("id, business_name, area(name), logo");
+    .select("id, business_name, area(name), logo, is_featured");
   if (DBError) {
     return { error: DBError.message };
   }
@@ -654,9 +662,10 @@ export const getIncome = async (): Promise<
   const { data: allOrders, error: allOrdersError } = await supabase
     .from("order")
     .select(
-      "id, date, service_id, services!inner(id, name, price, artist_id), booked_add_on(id, count, add_on(id, name, price))"
+      "id, date, service_id, services!inner(id, name, price, artist_id), booked_add_on(id, count, add_on(id, name, price)), status"
     )
     .eq("services.artist_id", user.id)
+    .eq("status", "paid")
     .gte("date", sixMonthsAgoStart)
     .lte("date", currentMonthEnd);
 
@@ -798,6 +807,84 @@ export const getUsers = async (): Promise<Result<User[]>> => {
     .from("users")
     .select("id, first_name, last_name, email, phone_no, role, created_at")
     .eq("role", "customer");
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  return { data: data };
+}
+
+export const getNotifications = async (): Promise<Result<Notification[]>> => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!user) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if (role !== "artist") {
+    return { error: "User is not an artist" };
+  }
+  const { data, error: DBError } = await supabase
+    .from("notifications")
+    .select("id, message, is_read, created_at")
+    .eq("artist_id", user.id)
+    .order("created_at", { ascending: false });
+  if (DBError) {
+    return { error: DBError.message };
+  }
+
+  const { error: userDataError } = await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("artist_id", user.id)
+    .eq("is_read", false);
+  if (userDataError) {
+    return { error: userDataError.message };
+  }
+  
+  return { data: data.map((notification) => ({
+    id: notification.id.toString(),
+    message: notification.message,
+    isRead: notification.is_read,
+    created_at: notification.created_at.toString(),
+  })) };
+}
+
+export const getNotificationCount = async (): Promise<Result<number>> => {
+  const supabase = await createClient();
+  const { data, error: DBError } = await supabase.auth.getUser();
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if (role !== "artist") {
+    return { error: "User is not an artist" };
+  }
+  const { data: notifications, error: notificationsError } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact" })
+    .eq("artist_id", data.user.id)
+    .eq("is_read", false);
+  if (notificationsError) {
+    return { error: notificationsError.message };
+  }
+  return { data: notifications.length };
+}
+
+export const getFeaturedArtists = async (): Promise<Result<Artist[]>> => {
+  const supabase = await createClient();
+  const { data, error: DBError } = await supabase
+    .from("artist_profile")
+    .select("id, business_name, area(name), logo, is_featured")
+    .eq("is_featured", true);
   if (DBError) {
     return { error: DBError.message };
   }

@@ -1,6 +1,6 @@
 "use client"
 
-import { bookService } from "@/action/user"
+import { bookService, createOrder } from "@/action/user"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +9,7 @@ import { addOnBookingSchema, ArtistProfile, BookedService, bookingSchema, Servic
 import { timeToMinutes } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import axios, { AxiosError } from "axios"
-import { format } from "date-fns"
+import { format, isToday } from "date-fns"
 import { useParams, useRouter } from "next/navigation"
 import { useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -17,11 +17,19 @@ import Error from "../Error"
 import { Input } from "../ui/input"
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group"
 import NailLoader from "../NailLoader"
+import { Currency } from "lucide-react"
+import Razorpay from "razorpay"
 
 interface BookAppointmentProps {
   bookedService: BookedService
   services: Service[]
   profile: ArtistProfile
+}
+
+declare global {
+  interface Window {
+    Razorpay: any
+  }
 }
 
 const getSlotData = async (id: string, serviceId: string) => {
@@ -75,6 +83,7 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
 
     const dayOfWeek = getSelectedDayOfWeek(selectedDate);
     const formattedDate = format(selectedDate, "yyyy-MM-dd");
+    const isTodayDate = isToday(selectedDate)
     const serviceDuration = bookedService.service.duration;
     const availableTimeSlots = slotData.availability.filter(slot => slot.day === dayOfWeek);
 
@@ -105,6 +114,11 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
     return TIME_OPTIONS.filter(time => {
       const startMinutes = timeToMinutes(time);
       const endMinutes = startMinutes + serviceDuration;
+
+      if (isTodayDate) {
+        const currentTime = new Date().getHours() * 60 + new Date().getMinutes()
+        if (startMinutes < currentTime) return false
+      }
 
       // Check if this time is within any available slot for this day
       const slot = availableTimeSlots.find(slot =>
@@ -214,15 +228,37 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
       setLoading(false)
       return
     }
-    const { error } = await bookService(booking.data, addOnBooking.data)
+    const { data, error } = await createOrder(booking.data, addOnBooking.data)
     if (error) {
       toast.error(error)
       setLoading(false)
       return
     } else {
-      toast.success("Booking successful")
-      router.push(`/customer-dashboard/bookings`)
+      if(!data){
+        toast.error("Something went wrong")
+        setLoading(false)
+        return;
+      }
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: 30000,
+        currency: "INR",
+        name: "NéMai",
+        image: "/logo.png",
+        order_id: data.order_id,
+        callback_url: `${window.location.origin}/customer-dashboard/bookings`,
+        prefill: {
+          name: data.name,
+          email: data.email,
+          phone: data.phone
+        },
+        theme: {
+          color: "#F37254"
+        }
+      }
       setLoading(false)
+      const rzp = new window.Razorpay(options)
+      rzp.open()
     }
   }
 

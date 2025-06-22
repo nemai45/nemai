@@ -3,9 +3,11 @@ import { QueryProvider } from '@/components/QueryProvider';
 import { SidebarLayout, SidebarMenuItemType } from '@/components/Sidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { getUserRole } from '@/lib/get-user-role';
+import { getNotificationCount } from '@/lib/user';
 import { createClient } from '@/utils/supabase/server';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import Script from 'next/script';
 import React from 'react';
 
 const layout = async ({
@@ -62,6 +64,7 @@ const layout = async ({
     { title: "Profile", path: "/artist-dashboard/profile", icon: "UserCircle" },
     { title: "History", path: "/artist-dashboard/history", icon: "History" },
     { title: "Preview", path: `/artist-profile/${user.id}`, icon: "Eye" },
+    { title: "Notifications", path: "/artist-dashboard/notifications", icon: "Bell" },
   ];
 
   const customerMenuItems: SidebarMenuItemType[] = [
@@ -82,14 +85,24 @@ const layout = async ({
     menuItems = customerMenuItems
   }
 
+  let unReadNotifications 
+  if(role === "artist") {
+    const result = await getNotificationCount();
+    if("error" in result) {
+      return <div>{result.error}</div>;
+    }
+    unReadNotifications = result.data;
+  }
+  
   return (
     <QueryProvider>
       <SidebarProvider defaultOpen={true}>
         <div className="min-h-screen flex w-full">
-          <SidebarLayout menuItems={menuItems} />
+          <SidebarLayout unReadNotifications={unReadNotifications} menuItems={menuItems} />
           <div className="flex-1 flex flex-col">
             <DashboardHeader />
             <main className="flex-1 p-6 overflow-y-auto bg-purple-50/30">
+              <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
               {children}
               {modal}
             </main>
