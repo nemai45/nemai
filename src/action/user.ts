@@ -979,7 +979,8 @@ export const addBlockedDate = async (data: BlockedDate, id?: string) => {
     .from("order")
     .select("start_time, services!inner(duration, artist_id), status")
     .eq("date", data.date)
-    .eq("status", "paid")
+    .not("status", "eq", "cancelled")
+    .not("status", "eq", "pending")
     .eq("services.artist_id", id || user.id);
 
   if (bookingsError) {
@@ -1237,7 +1238,8 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking, razorp
     .from("order")
     .select("start_time, services!inner(duration, artist_id), status")
     .eq("date", booking.date)
-    .eq("status", "paid")
+    .not("status", "eq", "cancelled")
+    .not("status", "eq", "pending")
     .eq("services.artist_id", serviceData.artist_id);
 
   if (bookingsError) {
@@ -1345,13 +1347,6 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking, razorp
     };
   }
 
-  const { error: notificationError } = await supabase.from("notifications").insert({
-    message: `You have a new booking for ${serviceData.name} on ${format(new Date(booking.date), "dd MMM yyyy")} at ${minutesToTime(booking.start_time)} by ${userData.first_name} ${userData.last_name}.`,
-    artist_id: serviceData.artist_id,
-  });
-  if (notificationError) {
-    return { error: notificationError.message };
-  }
   return {
     error: null,
   };
@@ -1470,4 +1465,50 @@ export const createOrder = async (booking: Booking, addOns: AddOnBooking) => {
     return { error: error.description };
   }
 
+}
+
+export const cancelBooking = async (bookingId: string, reason: string) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if (role !== "customer") {
+    return { error: "User is not a customer" };
+  }
+  const { data: userData, error: userError } = await supabase
+    .from("users")
+    .select("first_name, last_name")
+    .eq("id", data.user.id)
+    .single();
+  if (userError) {
+    return { error: userError.message };
+  }
+  const { data: bookingData, error: bookingError } = await supabase
+    .from("order")
+    .select("id, status, user_id, services!inner(artist_id, name), date, start_time")
+    .eq("id", bookingId)
+    .single();
+  if (bookingError) {
+    return { error: bookingError.message };
+  }
+  if (bookingData.user_id !== data.user.id) {
+    return { error: "You are not authorized to cancel this booking" };
+  }
+  if(bookingData.status !== "paid") {
+    return { error: "You haven't paid for this booking, so it is not valid" };
+  }
+  const { error: cancelError } = await supabase.from("order").update({
+    status: "cancel_requested",
+    cancel_message: reason,
+  }).eq("id", bookingId);
+  if (cancelError) {
+    return { error: cancelError.message };
+  }
+  revalidatePath("/customer-dashboard/bookings");
+  return { error: null };
 }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@/utils/supabase/server";
+import { format } from "date-fns";
+import { minutesToTime } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,6 +38,35 @@ export async function POST(req: NextRequest) {
           { error: bookingError.message },
           { status: 500 }
         );
+      }
+      const { data: bookingData, error: bookingDataError } = await supabase
+        .from("order")
+        .select(
+          "id, users!inner(first_name, last_name), services!inner(name, artist_id), start_time, date"
+        )
+        .eq("razorpay_id", razorpayId)
+        .single();
+      if (bookingDataError) {
+        return NextResponse.json(
+          { error: bookingDataError.message },
+          { status: 500 }
+        );
+      }
+      const { error: notificationError } = await supabase
+        .from("notifications")
+        .insert({
+          message: `You have a new booking for ${
+            bookingData.services.name
+          } on ${format(
+            new Date(bookingData.date),
+            "dd MMM yyyy"
+          )} at ${minutesToTime(bookingData.start_time)} by ${
+            bookingData.users.first_name
+          } ${bookingData.users.last_name}.`,
+          artist_id: bookingData.services.artist_id,
+        });
+      if (notificationError) {
+        return { error: notificationError.message };
       }
       return NextResponse.json(
         { message: "Payment captured" },

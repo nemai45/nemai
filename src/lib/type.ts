@@ -199,6 +199,7 @@ export const bookingInfoSchema = z.object({
   start_time: z.number(),
   date: z.string(),
   client_address: z.string().nullable(),
+  status: z.enum(["pending", "paid", "cancel_requested", "cancelled"]),
 })
 
 export type BookingInfo = z.infer<typeof bookingInfoSchema>;
@@ -249,5 +250,17 @@ export interface Notification {
   id: string;
   message: string;
   isRead: boolean;
+  created_at: string;
+}
+
+export interface CanceledBooking {
+  id: string;
+  name: string;
+  phone_no: string | null;
+  email: string;
+  service: string;
+  start_time: number;
+  date: string;
+  cancel_message: string;
   created_at: string;
 }

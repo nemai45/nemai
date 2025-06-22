@@ -61,7 +61,8 @@ export async function GET(
   const { data: bookedSlots, error: bookedSlotsError } = await supabase
     .from("order")
     .select("id, start_time, date, services!inner(duration, artist_id), status")
-    .eq("status", "paid")
+    .not("status", "eq", "cancelled")
+    .not("status", "eq", "pending")
     .eq("services.artist_id", id);
   if (bookedSlotsError) {
     return NextResponse.json(

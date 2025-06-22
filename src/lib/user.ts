@@ -18,6 +18,7 @@ import {
   Notification,
   Service,
   User,
+  CanceledBooking,
 } from "./type";
 import { endOfMonth, format, startOfMonth, subMonths } from "date-fns";
 
@@ -459,7 +460,8 @@ export const getBookings = async (): Promise<Result<BookingInfo[]>> => {
       "id, services(id, artist_profile(business_name), name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status"
     )
     .eq("user_id", user.id)
-    .eq("status", "paid")
+    .not("status", "eq", "cancelled")
+    .not("status", "eq", "pending")
     .order("date", { ascending: false })
     .order("start_time", { ascending: true });
 
@@ -483,6 +485,7 @@ export const getBookings = async (): Promise<Result<BookingInfo[]>> => {
     start_time: booking.start_time,
     date: booking.date,
     client_address: booking.client_address,
+    status: booking.status,
   }));
 
   return { data: info };
@@ -534,7 +537,8 @@ export const getArtistBookings = async (
       "id, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status"
     )
     .eq("services.artist_id", artistId)
-    .eq("status", "paid")
+    .not("status", "eq", "cancelled")
+    .not("status", "eq", "pending")
     .gte("date", formattedDate)
     .order("date");
   if (DBError) {
@@ -557,6 +561,7 @@ export const getArtistBookings = async (
     start_time: booking.start_time,
     date: booking.date,
     client_address: booking.client_address,
+    status: booking.status,
   }));
   return { data: info };
 };
@@ -585,7 +590,8 @@ export const getPastBookings = async (): Promise<Result<BookingInfo[]>> => {
       "id, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status"
     )
     .eq("services.artist_id", user.id)
-    .eq("status", "paid")
+    .not("status", "eq", "cancelled")
+    .not("status", "eq", "pending")
     .lt("date", formattedDate);
   if (DBError) {
     return { error: DBError.message };
@@ -607,6 +613,7 @@ export const getPastBookings = async (): Promise<Result<BookingInfo[]>> => {
     start_time: booking.start_time,
     date: booking.date,
     client_address: booking.client_address,
+    status: booking.status,
   }));
   return { data: info };
 };
@@ -665,7 +672,8 @@ export const getIncome = async (): Promise<
       "id, date, service_id, services!inner(id, name, price, artist_id), booked_add_on(id, count, add_on(id, name, price)), status"
     )
     .eq("services.artist_id", user.id)
-    .eq("status", "paid")
+    .not("status", "eq", "cancelled")
+    .not("status", "eq", "pending")
     .gte("date", sixMonthsAgoStart)
     .lte("date", currentMonthEnd);
 
@@ -889,4 +897,37 @@ export const getFeaturedArtists = async (): Promise<Result<Artist[]>> => {
     return { error: DBError.message };
   }
   return { data: data };
+}
+
+export const getCanceledBookings = async (): Promise<Result<CanceledBooking[]>> => {
+  const supabase = await createClient();
+  const { data, error: DBError } = await supabase.auth.getUser();
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if (role !== "admin") {
+    return { error: "User is not an admin" };
+  }
+  const { data: bookings, error: bookingsError } = await supabase
+    .from("order")
+    .select("id, users(first_name, last_name, phone_no, email), services!inner(name), start_time, date, status, cancel_message, created_at")
+    .eq("status", "cancel_requested");
+  if (bookingsError) {
+    return { error: bookingsError.message };
+  }
+  return { data: bookings.map((booking) => ({
+    id: booking.id,
+    name: booking.users.first_name + " " + booking.users.last_name,
+    phone_no: booking.users.phone_no,
+    email: booking.users.email,
+    service: booking.services.name,
+    start_time: booking.start_time,
+    date: booking.date,
+    cancel_message: booking.cancel_message || "No reason provided",
+    created_at: booking.created_at.toString(),
+  }))}
 }
