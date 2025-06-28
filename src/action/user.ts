@@ -7,9 +7,11 @@ import {
   BlockedDate,
   Booking,
   CombinedInfo,
+  CreatePayment,
   Result,
   Service
 } from "@/lib/type";
+import { getArtistDue } from "@/lib/user";
 import { timeToMinutes, uploadToCloudinary } from "@/lib/utils";
 import supabaseAdmin from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
@@ -1531,5 +1533,83 @@ export const cancelBooking = async (bookingId: string, reason: string) => {
     return { error: cancelError.message };
   }
   revalidatePath("/customer-dashboard/bookings");
+  return { error: null };
+}
+
+export const createPayment = async (payment: CreatePayment) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if(role !== "admin") {
+    return { error: "User is not an admin" };
+  }
+  const result = await getArtistDue(payment.artist_id);
+  if('error' in result) {
+    return { error: result.error };
+  }
+  if(result.data < payment.amount) {
+    return { error: "Amount is greater than due" };
+  }
+  const { error: paymentError } = await supabase.from("payments").insert({
+    artist_id: payment.artist_id,
+    amount: payment.amount,
+    notes: payment.notes,
+  });
+  if(paymentError) {
+    return { error: paymentError.message };
+  }
+  revalidatePath("/admin/payments");
+  return { error: null };
+}
+
+export const disableArtist = async (artistId: string) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if(role !== "admin") {  
+    return { error: "User is not an admin" };
+  }
+  const { error: DBError } = await supabase.from("artist_profile").update({
+    disabled: true,
+  }).eq("id", artistId);
+  if(DBError) {
+    return { error: DBError.message };
+  }
+  revalidatePath("/admin/artists");
+  return { error: null };
+}
+
+export const enableArtist = async (artistId: string) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if(role !== "admin") {
+    return { error: "User is not an admin" };
+  }
+  const { error: DBError } = await supabase.from("artist_profile").update({
+    disabled: false,
+  }).eq("id", artistId);
+  if(DBError) {
+    return { error: DBError.message };
+  }
+  revalidatePath("/admin/artists");
   return { error: null };
 }

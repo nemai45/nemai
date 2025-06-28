@@ -19,6 +19,9 @@ import {
   Service,
   User,
   CanceledBooking,
+  ArtistPayment,
+  Payment,
+  ArtistPaymentHistory,
 } from "./type";
 import { endOfMonth, format, startOfMonth, subMonths } from "date-fns";
 
@@ -636,9 +639,12 @@ export const getArtists = async (): Promise<Result<Artist[]>> => {
   } 
   const { data, error: DBError } = await supabase
     .from("artist_profile")
-    .select("id, business_name, area(name), logo, is_featured");
+    .select("id, business_name, area(name), logo, is_featured, disabled");
   if (DBError) {
     return { error: DBError.message };
+  }
+  if(role === "customer") {
+    return { data: data.filter((artist) => !artist.disabled) };
   }
   return { data: data };
 };
@@ -891,7 +897,7 @@ export const getFeaturedArtists = async (): Promise<Result<Artist[]>> => {
   const supabase = await createClient();
   const { data, error: DBError } = await supabase
     .from("artist_profile")
-    .select("id, business_name, area(name), logo, is_featured")
+    .select("id, business_name, area(name), logo, is_featured, disabled")
     .eq("is_featured", true);
   if (DBError) {
     return { error: DBError.message };
@@ -932,7 +938,7 @@ export const getCanceledBookings = async (): Promise<Result<CanceledBooking[]>> 
   }))}
 }
 
-export const getArtistsDue = async (): Promise<Result<{id: string, name: string, due: number}[]>> => {
+export const getArtistsDue = async (): Promise<Result<ArtistPayment[]>> => {
   const supabase = await createClient();
   const { data, error: DBError } = await supabase.auth.getUser();
   if (DBError) {
@@ -947,8 +953,8 @@ export const getArtistsDue = async (): Promise<Result<{id: string, name: string,
   }
   const { data: orders, error: ordersError } = await supabase
     .from("order")
-    .select("id, total_amount, paid_amount, created_at, date, services!inner(artist_profile!inner(id, business_name))")
-    .lt("date", new Date().toISOString())
+    .select("id, total_amount, paid_amount, created_at, date, services!inner(artist_profile!inner(id, business_name, upi_id))")
+    .lt("date", format(new Date(), "yyyy-MM-dd"))
     .eq("status", "paid")
   if (ordersError) {
     return { error: ordersError.message };
@@ -960,28 +966,130 @@ export const getArtistsDue = async (): Promise<Result<{id: string, name: string,
   if (paymentsError) {
     return { error: paymentsError.message };
   }
-  const dueMap = new Map<string, { name: string, due: number }>();
+
+  const dueMap = new Map<string, { name: string, due: number, upi_id: string }>();
   for (const order of orders) {
     const artistId = order.services.artist_profile.id;
     const due = order.paid_amount;
     if (dueMap.has(artistId)) {
-      dueMap.set(artistId, { name: order.services.artist_profile.business_name, due: dueMap.get(artistId)!.due + due });
+      dueMap.set(artistId, { name: order.services.artist_profile.business_name, due: dueMap.get(artistId)!.due + due, upi_id: order.services.artist_profile.upi_id });
     } else {
-      dueMap.set(artistId, { name: order.services.artist_profile.business_name, due: due });
+      dueMap.set(artistId, { name: order.services.artist_profile.business_name, due: due, upi_id: order.services.artist_profile.upi_id });
     }
   }
+  
   for (const payment of payments) {
     const artistId = payment.artist_id;
     const amount = payment.amount;
     if (dueMap.has(artistId)) {
-      dueMap.set(artistId, { name: dueMap.get(artistId)!.name, due: dueMap.get(artistId)!.due - amount });
+      dueMap.set(artistId, { name: dueMap.get(artistId)!.name, due: dueMap.get(artistId)!.due - amount, upi_id: dueMap.get(artistId)!.upi_id });
+      if(dueMap.get(artistId)!.due == 0) {
+        dueMap.delete(artistId);
+      }
     }
   }
-  const artists = Array.from(dueMap.entries()).map(([artistId, { name, due }]) => ({
+  const artists: ArtistPayment[] = Array.from(dueMap.entries()).map(([artistId, { name, due, upi_id }]) => ({
     id: artistId,
     name,
     due,
+    upi_id
   }));
   return { data: artists };
 }
 
+export const getArtistDue = async (artistId: string): Promise<Result<number>> => {
+  const supabase = await createClient();
+  const { data, error: DBError } = await supabase.auth.getUser();
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if(role !== "admin" && role !== "artist") {
+    return { error: "User is not an admin or artist" };
+  }
+  if(data.user.id !== artistId && role !== "admin") {
+    return { error: "Artist not matched" };
+  }
+
+  const { data: orders, error: ordersError } = await supabase
+    .from("order")
+    .select("id, total_amount, paid_amount, created_at, date, services!inner(artist_profile!inner(id, business_name, upi_id))")
+    .lt("date", format(new Date(), "yyyy-MM-dd"))
+    .eq("status", "paid")
+    .eq("services.artist_profile.id", artistId)
+  if (ordersError) {
+    return { error: ordersError.message };
+  }
+  const { data: payments, error: paymentsError } = await supabase
+    .from("payments")
+    .select("id, artist_id, amount, created_at")
+    .eq("artist_id", artistId)
+  if (paymentsError) {
+    return { error: paymentsError.message };
+  }
+  const due = orders.reduce((sum, order) => sum + order.paid_amount, 0);
+  const paid = payments.reduce((sum, payment) => sum + payment.amount, 0);
+  return { data: due - paid };
+}
+
+export const getPayments = async (): Promise<Result<Payment[]>> => {
+  const supabase = await createClient();
+  const { data, error: DBError } = await supabase.auth.getUser();
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if (role !== "admin") {
+    return { error: "User is not an admin" };
+  }
+  const { data: payments, error: paymentsError } = await supabase
+    .from("payments")
+    .select("id, amount, notes, created_at, artist_id, artist_profile!inner(business_name)")
+  if (paymentsError) {
+    return { error: paymentsError.message };
+  }
+  return { data: payments.map((payment) => ({
+    id: payment.id,
+    name: payment.artist_profile.business_name,
+    amount: payment.amount,
+    notes: payment.notes,
+    created_at: payment.created_at.toString(),
+  }))}
+}
+
+export const getArtistPayments = async (artistId: string): Promise<Result<ArtistPaymentHistory[]>> => {
+  const supabase = await createClient();
+  const { data, error: DBError } = await supabase.auth.getUser();
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if(role !== "artist") {
+    return { error: "User is not an artist" };
+  }
+  if(data.user.id !== artistId) {
+    return { error: "Artist not matched" };
+  }
+  const { data: payments, error: paymentsError } = await supabase
+    .from("payments")
+    .select("id, amount, notes, created_at, artist_id")
+    .eq("artist_id", artistId)
+  if (paymentsError) {
+    return { error: paymentsError.message };
+  }
+  return { data: payments.map((payment) => ({
+    id: payment.id,
+    amount: payment.amount,
+    notes: payment.notes,
+    created_at: payment.created_at.toString(),
+  }))}
+}

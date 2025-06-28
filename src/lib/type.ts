@@ -212,6 +212,7 @@ export const artistSchema = z.object({
   }),
   logo: z.string().nullable(),
   is_featured: z.boolean(),
+  disabled: z.boolean(),
 })
 
 export type Artist = z.infer<typeof artistSchema>;
@@ -262,5 +263,33 @@ export interface CanceledBooking {
   start_time: number;
   date: string;
   cancel_message: string;
+  created_at: string;
+}
+
+export interface ArtistPayment {
+  id: string;
+  name: string;
+  upi_id: string;
+  due: number;
+}
+
+export interface CreatePayment {
+  artist_id: string;
+  amount: number;
+  notes: string;
+}
+
+export interface Payment {
+  id: string;
+  name: string;
+  amount: number;
+  notes: string;
+  created_at: string;
+}
+
+export interface ArtistPaymentHistory {
+  id: string;
+  amount: number;
+  notes: string;
   created_at: string;
 }

@@ -1,10 +1,10 @@
 "use client"
-import { addFeaturedArtist, deleteArtist, removeFeaturedArtist } from "@/action/user"
+import { addFeaturedArtist, deleteArtist, disableArtist, enableArtist, removeFeaturedArtist } from "@/action/user"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Artist } from "@/lib/type"
-import { MapPin, Star, StarOff } from "lucide-react"
+import { Eye, EyeOff, MapPin, Star, StarOff } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -20,6 +20,28 @@ const SUPABASE_BUCKET_URL_PREFIX = "https://ftqdfdhxdtekgjxrlggp.supabase.co/sto
 const ArtistCard = ({ artist, role }: ArtistCardProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
+  const disableArtistAction = async () => {
+    setIsLoading(true);
+    const { error } = await disableArtist(artist.id);
+    if (error) {
+      toast.error(error);
+    } else {
+      toast.success("Artist disabled successfully");
+    }
+    setIsLoading(false);
+  }
+
+  const enableArtistAction = async () => {
+    setIsLoading(true);
+    const { error } = await enableArtist(artist.id);
+    if (error) {
+      toast.error(error);
+    } else {
+      toast.success("Artist enabled successfully");
+    }
+    setIsLoading(false);
+  }
+  
   const deleteArtistByID = async () => {
     if (!confirm("Are you sure you want to delete this artist?")) {
       return;
@@ -33,6 +55,7 @@ const ArtistCard = ({ artist, role }: ArtistCardProps) => {
     }
     setIsLoading(false);
   }
+
   const addFeaturedArtistAction = async () => {
     setIsLoading(true);
     const result = await addFeaturedArtist(artist.id);
@@ -61,15 +84,22 @@ const ArtistCard = ({ artist, role }: ArtistCardProps) => {
       className="unicorn-card overflow-hidden group hover:scale-[1.02] transition-transform duration-300 rounded-lg shadow-lg"
     >
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center justify-between gap-2">
           {
-            role === "admin" && (
+              role === "admin" && (
               artist.is_featured ? (
-                <Star onClick={removeFeaturedArtistAction} className="w-8 h-8 text-yellow-500" />
+              <Star onClick={removeFeaturedArtistAction} className="w-8 h-8 text-yellow-500" />
               ) : (
-                <StarOff onClick={addFeaturedArtistAction} className="w-8 h-8 text-yellow-500" />
+              <StarOff onClick={addFeaturedArtistAction} className="w-8 h-8 text-yellow-500" />
               )
-            )
+              )
+          }
+          {
+            role === "admin" && (artist.disabled ? (
+              <EyeOff onClick={enableArtistAction} className="w-8 h-8 text-red-500" />
+            ) : (
+              <Eye onClick={disableArtistAction} className="w-8 h-8 text-green-500" />
+            ))
           }
         </CardTitle>
       </CardHeader>
