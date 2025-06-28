@@ -1,6 +1,6 @@
 "use client"
 
-import { bookService, createOrder } from "@/action/user"
+import { createOrder } from "@/action/user"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,11 +14,9 @@ import { useParams, useRouter } from "next/navigation"
 import { useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import Error from "../Error"
+import NailLoader from "../NailLoader"
 import { Input } from "../ui/input"
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group"
-import NailLoader from "../NailLoader"
-import { Currency } from "lucide-react"
-import Razorpay from "razorpay"
 
 interface BookAppointmentProps {
   bookedService: BookedService
@@ -241,7 +239,7 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
       }
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: 1000,
+        amount: data.tokenAmount * 100,
         currency: "INR",
         name: "NéMai",
         image: "/logo.png",

@@ -931,3 +931,57 @@ export const getCanceledBookings = async (): Promise<Result<CanceledBooking[]>> 
     created_at: booking.created_at.toString(),
   }))}
 }
+
+export const getArtistsDue = async (): Promise<Result<{id: string, name: string, due: number}[]>> => {
+  const supabase = await createClient();
+  const { data, error: DBError } = await supabase.auth.getUser();
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if (role !== "admin") {
+    return { error: "User is not an admin" };
+  }
+  const { data: orders, error: ordersError } = await supabase
+    .from("order")
+    .select("id, total_amount, paid_amount, created_at, date, services!inner(artist_profile!inner(id, business_name))")
+    .lt("date", new Date().toISOString())
+    .eq("status", "paid")
+  if (ordersError) {
+    return { error: ordersError.message };
+  }
+  const { data: payments, error: paymentsError } = await supabase
+    .from("payments")
+    .select("id, artist_id, amount, created_at")
+
+  if (paymentsError) {
+    return { error: paymentsError.message };
+  }
+  const dueMap = new Map<string, { name: string, due: number }>();
+  for (const order of orders) {
+    const artistId = order.services.artist_profile.id;
+    const due = order.paid_amount;
+    if (dueMap.has(artistId)) {
+      dueMap.set(artistId, { name: order.services.artist_profile.business_name, due: dueMap.get(artistId)!.due + due });
+    } else {
+      dueMap.set(artistId, { name: order.services.artist_profile.business_name, due: due });
+    }
+  }
+  for (const payment of payments) {
+    const artistId = payment.artist_id;
+    const amount = payment.amount;
+    if (dueMap.has(artistId)) {
+      dueMap.set(artistId, { name: dueMap.get(artistId)!.name, due: dueMap.get(artistId)!.due - amount });
+    }
+  }
+  const artists = Array.from(dueMap.entries()).map(([artistId, { name, due }]) => ({
+    id: artistId,
+    name,
+    due,
+  }));
+  return { data: artists };
+}
+

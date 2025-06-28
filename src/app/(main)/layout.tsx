@@ -70,6 +70,7 @@ const layout = async ({
     { title: "History", path: "/artist-dashboard/history", icon: "History" },
     { title: "Preview", path: `/artist-profile/${user.id}`, icon: "Eye" },
     { title: "Notifications", path: "/artist-dashboard/notifications", icon: "Bell" },
+    { title: "Payments", path: "/artist-dashboard/payments", icon: "CreditCard" },
   ];
 
   const customerMenuItems: SidebarMenuItemType[] = [

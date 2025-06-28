@@ -99,9 +99,11 @@ const ArtistCard = ({ artist, role }: ArtistCardProps) => {
             <Button className="w-full mt-4 unicorn-button" onClick={deleteArtistByID}>Delete</Button>
           </>
         ) : (
-          <Link href={`/artist-profile/${artist.id}`}>
-            <Button className="w-full mt-4 unicorn-button">Book Now</Button>
-          </Link>
+          role === "customer" && (
+            <Link href={`/artist-profile/${artist.id}`}>
+              <Button className="w-full mt-4 unicorn-button">Book Now</Button>
+            </Link>
+          )
         )}
       </CardContent>
     </Card>

@@ -30,7 +30,7 @@ const AddOnDrawer = ({ isDrawerOpen, setIsDrawerOpen, services, isBooked, setIsB
                 <DrawerContent>
                     <div className="mx-auto w-full max-w-sm">
                         <DrawerHeader>
-                            <DrawerTitle>Add-on Services</DrawerTitle>
+                            <DrawerTitle>Booking Summary: {bookedService.service.name}</DrawerTitle>
                             <DrawerDescription>Enhance your appointment with these additional services.</DrawerDescription>
                         </DrawerHeader>
                         <div className="p-4">

@@ -10,10 +10,9 @@ import {
   Result,
   Service
 } from "@/lib/type";
-import { minutesToTime, timeToMinutes, uploadToCloudinary } from "@/lib/utils";
+import { timeToMinutes, uploadToCloudinary } from "@/lib/utils";
 import supabaseAdmin from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
-import { format } from "date-fns";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -1144,7 +1143,7 @@ export const deleteBlockedDate = async (id: string, artistId?: string) => {
   };
 };
 
-export const bookService = async (booking: Booking, addOns: AddOnBooking, razorpayId: string) => {
+export const bookService = async (booking: Booking, addOns: AddOnBooking, razorpayId: string, paidAmount: number, totalAmount: number) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -1319,6 +1318,8 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking, razorp
       user_id: user.id,
       client_address: booking.location_type === "client_home" ? booking.address : null,
       razorpay_id: razorpayId,
+      paid_amount: paidAmount,
+      total_amount: totalAmount,
     })
     .select("id")
     .single();
@@ -1439,8 +1440,27 @@ export const createOrder = async (booking: Booking, addOns: AddOnBooking) => {
   if (userError) {
     return { error: userError.message };
   }
+  const { data: serviceData, error: serviceError } = await supabase
+    .from("services")
+    .select("id, name, price")
+    .eq("id", booking.service_id)
+    .single();
+  if (serviceError) {
+    return { error: serviceError.message };
+  }
+
+  const { data: addOnsData, error: addOnsError } = await supabase
+    .from("add_on")
+    .select("id, name, price, count")
+    .in("id", addOns.map((addOn) => addOn.add_on_id));
+  if (addOnsError) {
+    return { error: addOnsError.message };
+  }
+
+  const totalAmount = serviceData.price + addOnsData.reduce((acc, addOn) => acc + addOn.price * addOn.count, 0);
+  const tokenAmount = Math.ceil((totalAmount * 0.3) / 50) * 50
   const options = {
-    amount: 1000,
+    amount: Math.max(tokenAmount, 200) * 100,
     currency: "INR",
     receipt: `${userData.id.slice(0, 8)}_${Date.now()}`,
     notes: {
@@ -1450,7 +1470,7 @@ export const createOrder = async (booking: Booking, addOns: AddOnBooking) => {
   }
   try{
     const order = await razorpay.orders.create(options);
-    const { error: bookingError } = await bookService(booking, addOns, order.id);
+    const { error: bookingError } = await bookService(booking, addOns, order.id, Math.max(tokenAmount, 200), totalAmount);
     if (bookingError) {
       return { error: bookingError };
     }
@@ -1459,6 +1479,7 @@ export const createOrder = async (booking: Booking, addOns: AddOnBooking) => {
       name: userData.first_name + " " + userData.last_name,
       email: userData.email,
       phone: userData.phone_no,
+      tokenAmount: Math.max(tokenAmount, 200),
     }, error: null };
   }catch(error: any){
     console.log(error)
