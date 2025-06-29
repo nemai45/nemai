@@ -1,6 +1,6 @@
 "use client"
 
-import { createOrder } from "@/action/user"
+import { createOrder, getPromoCodeDiscount } from "@/action/user"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -54,6 +54,8 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
   const [loading, setLoading] = useState(false)
   const [locationType, setLocationType] = useState<"work_from_home" | "client_home">(profile.professional.is_work_from_home ? "work_from_home" : "client_home")
   const [address, setAddress] = useState<string | undefined>(undefined)
+  const [promoCodeStr, setPromoCodeStr] = useState<string | undefined>(undefined)
+  const [promoCode, setPromoCode] = useState<{ code: string, discount: number, codeId: string } | undefined>(undefined)
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
 
@@ -226,7 +228,7 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
       setLoading(false)
       return
     }
-    const { data, error } = await createOrder(booking.data, addOnBooking.data)
+    const { data, error } = await createOrder(booking.data, addOnBooking.data, promoCode?.codeId)
     if (error) {
       toast.error(error)
       setLoading(false)
@@ -260,6 +262,21 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
     }
   }
 
+  const applyPromoCode = async () => {
+    if (!promoCodeStr) {
+      toast.error("Please enter a promo code")
+      return
+    }
+    const result = await getPromoCodeDiscount(promoCodeStr)
+    if ('error' in result) {
+      toast.error(result.error)
+      return
+    }
+    setPromoCode({ code: promoCodeStr, ...result.data })
+    setPromoCodeStr("")
+    toast.success("Promo code applied successfully")
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -288,14 +305,62 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
                         </div>
                       ))}
                   </div>
-                  <div className="pt-2 border-t flex justify-between font-medium">
-                    <span>Total</span>
-                    <span>
-                      ₹{ref.current.price} • {ref.current.duration} min
-                    </span>
-                  </div>
                 </div>
               )}
+              <div className="pt-2 border-t flex justify-between font-medium">
+                <span>Total</span>
+                <span>
+                  {promoCode ? (
+                    <span className="text-sm text-gray-800">
+                      <span className="line-through text-gray-400 mr-2">
+                        ₹{ref.current.price}
+                      </span>
+                      <span className="text-green-600 font-semibold">
+                        ₹{ref.current.price - (ref.current.price * promoCode.discount / 100)}
+                      </span>
+                      <span className="ml-1 text-gray-600">• {ref.current.duration} min</span>
+                    </span>
+                  ) : (
+                    <span className="text-sm text-gray-800">
+                      ₹{ref.current.price} • {ref.current.duration} min
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-md shadow-sm space-y-4 w-full max-w-md">
+                <div className="flex flex-col space-y-2">
+                  <Label htmlFor="promo">Promo Code</Label>
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      id="promo"
+                      type="text"
+                      placeholder="Enter promo code"
+                      value={promoCodeStr}
+                      onChange={(e) => setPromoCodeStr(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      onClick={applyPromoCode}
+                      className="bg-primary text-white"
+                      disabled={!!promoCode}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </div>
+
+                {promoCode && (
+                  <div className="bg-green-100 text-green-800 px-4 py-2 rounded-md text-sm flex justify-between items-center">
+                    <div>
+                      <strong>Promo Applied:</strong> {promoCode.code}
+                    </div>
+                    <div>
+                      <strong>Discount:</strong> {promoCode.discount}%
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
 
             <div className="space-y-2">

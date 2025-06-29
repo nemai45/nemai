@@ -117,7 +117,7 @@ export async function verifyOtpAndCreateSession(
     .eq("phone_no", phoneNumber)
     .maybeSingle();
 
-  if (!existingUser) {
+  if (!existingUser && isLogin) {
     const tempPassword = crypto.randomBytes(16).toString("hex");
     await supabaseAdmin.auth.admin.createUser({
       phone: phoneNumber,
@@ -203,7 +203,7 @@ export async function verifyOtpAndCreateSession(
       return { error: signInError.message };
     }
   }
-
+  
   if (isLogin) {
     redirect("/");
   }

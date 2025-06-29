@@ -26,8 +26,7 @@ export function BookingCard({ booking }: BookingCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const formattedTime = minutesToTime(booking.start_time);
   const formattedDate = format(new Date(booking.date), 'EEEE, MMMM d, yyyy');
-  const addOnTotal = booking.add_on.reduce((sum, addon) => sum + (addon.price * addon.count), 0);
-  const totalPrice = booking.service.price + addOnTotal;
+  const totalPrice = booking.total_amount;
   const [reason, setReason] = useState("");
   const [isCancel, setIsCancel] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

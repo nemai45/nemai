@@ -201,6 +201,7 @@ export const bookingInfoSchema = z.object({
   client_address: z.string().nullable(),
   status: z.enum(["pending", "paid", "cancel_requested", "cancelled"]),
   paid_amount: z.number(),
+  total_amount: z.number(),
 })
 
 export type BookingInfo = z.infer<typeof bookingInfoSchema>;
@@ -242,7 +243,7 @@ export interface User {
   id: string;
   first_name: string | null;
   last_name: string | null;
-  email: string;
+  email: string | null;
   phone_no: string | null;
   role: string;
   created_at: string;
@@ -259,7 +260,7 @@ export interface CanceledBooking {
   id: string;
   name: string;
   phone_no: string | null;
-  email: string;
+  email: string | null;
   service: string;
   start_time: number;
   date: string;

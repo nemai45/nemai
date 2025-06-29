@@ -464,7 +464,7 @@ export const getBookings = async (): Promise<Result<BookingInfo[]>> => {
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, paid_amount, services(id, artist_profile(business_name), name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status"
+      "id, total_amount, paid_amount, services(id, artist_profile(business_name), name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status"
     )
     .eq("user_id", user.id)
     .not("status", "eq", "cancelled")
@@ -481,6 +481,7 @@ export const getBookings = async (): Promise<Result<BookingInfo[]>> => {
   const info = data.map((booking) => ({
     id: booking.id,
     paid_amount: booking.paid_amount,
+    total_amount: booking.total_amount,
     name: booking.services.artist_profile.business_name,
     service: booking.services,
     phone_no: null,
@@ -542,7 +543,7 @@ export const getArtistBookings = async (
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, paid_amount, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status"
+      "id, total_amount, paid_amount, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status"
     )
     .eq("services.artist_id", artistId)
     .not("status", "eq", "cancelled")
@@ -558,6 +559,7 @@ export const getArtistBookings = async (
   const info = data.map((booking) => ({
     id: booking.id,
     paid_amount: booking.paid_amount,
+    total_amount: booking.total_amount,
     name: booking.users.first_name + " " + booking.users.last_name,
     phone_no: booking.users.phone_no,
     service: booking.services,
@@ -596,7 +598,7 @@ export const getPastBookings = async (): Promise<Result<BookingInfo[]>> => {
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, paid_amount, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status"
+      "id, total_amount, paid_amount, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status"
     )
     .eq("services.artist_id", user.id)
     .not("status", "eq", "cancelled")
@@ -611,6 +613,7 @@ export const getPastBookings = async (): Promise<Result<BookingInfo[]>> => {
   const info = data.map((booking) => ({
     id: booking.id,
     paid_amount: booking.paid_amount,
+    total_amount: booking.total_amount,
     name: booking.users.first_name + " " + booking.users.last_name,
     service: booking.services,
     phone_no: booking.users.phone_no,

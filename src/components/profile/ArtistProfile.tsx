@@ -1,19 +1,15 @@
 "use client"
-
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
-import { useUser } from "@/hooks/use-user"
 import { ArtistProfile as ArtistProfileType, BookedService } from "@/lib/type"
 import Autoplay from 'embla-carousel-autoplay'
-import { Map, MapPin, MapPinned, Milestone } from "lucide-react"
+import { MapPin, MapPinned } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import AlbumGrid from "../AlbumGrid"
 import BookAppointment from "../dashboard/BookAppointment"
 import ServicesList from "./ServicesList"
-import NailLoader from "../NailLoader"
-import Image from "next/image"
 
 interface ArtistProfileProps {
   artistProfile: ArtistProfileType
@@ -24,7 +20,7 @@ const ArtistProfile = ({ artistProfile }: ArtistProfileProps) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isBooked, setIsBooked] = useState(false)
   const [bookedService, setBookedService] = useState<BookedService | null>(null)
-
+  
   return (
     <>
       {!isBooked && <div className="container mx-auto px-4 space-y-6">

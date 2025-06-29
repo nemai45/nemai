@@ -1145,7 +1145,7 @@ export const deleteBlockedDate = async (id: string, artistId?: string) => {
   };
 };
 
-export const bookService = async (booking: Booking, addOns: AddOnBooking, razorpayId: string, paidAmount: number, totalAmount: number) => {
+export const bookService = async (booking: Booking, addOns: AddOnBooking, razorpayId: string, paidAmount: number, totalAmount: number, promoCodeId?: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -1176,6 +1176,21 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking, razorp
     return {  
       error: userError.message,
     };
+  }
+  let promoCodeData: { id: string, discount: number } | null = null;
+  if(promoCodeId) {
+    const { data: promoCodeDataDB, error: promoCodeError } = await supabase
+    .from("promo_codes")
+    .select("id, discount")
+    .eq("id", promoCodeId)
+    .single();
+    if (promoCodeError) {
+      return { error: promoCodeError.message };
+    }
+    if(!promoCodeDataDB) {
+      return { error: "Invalid promo code" };
+    }
+    promoCodeData = promoCodeDataDB;
   }
 
   const { data: serviceData, error: serviceError } = await supabase
@@ -1321,7 +1336,8 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking, razorp
       client_address: booking.location_type === "client_home" ? booking.address : null,
       razorpay_id: razorpayId,
       paid_amount: paidAmount,
-      total_amount: totalAmount,
+      total_amount: totalAmount - (totalAmount * (promoCodeData?.discount || 0) / 100),
+      promo_code: promoCodeId,
     })
     .select("id")
     .single();
@@ -1421,7 +1437,7 @@ export const removeFeaturedArtist = async (artistId: string): Promise<Result<str
   return { data: "Artist removed from featured artists" };
 }
 
-export const createOrder = async (booking: Booking, addOns: AddOnBooking) => {
+export const createOrder = async (booking: Booking, addOns: AddOnBooking, promoCodeId?: string) => {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
   if (error) {
@@ -1480,7 +1496,7 @@ export const createOrder = async (booking: Booking, addOns: AddOnBooking) => {
   }
   try{
     const order = await razorpay.orders.create(options);
-    const { error: bookingError } = await bookService(booking, addOns, order.id, Math.max(tokenAmount, 200), totalAmount);
+    const { error: bookingError } = await bookService(booking, addOns, order.id, Math.max(tokenAmount, 200), totalAmount, promoCodeId);
     if (bookingError) {
       return { error: bookingError };
     }
@@ -1623,4 +1639,33 @@ export const enableArtist = async (artistId: string) => {
   }
   revalidatePath("/admin/artists");
   return { error: null };
+}
+
+export const getPromoCodeDiscount = async (promoCode: string): Promise<Result<{discount: number, codeId: string}>> => {
+  const supabase = await createClient();
+  const { data, error: DBError } = await supabase.auth.getUser();
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if(role !== "customer") {
+    return { error: "User is not a customer" };
+  }
+  console.log(promoCode)
+  const { data: promoCodeData, error: promoCodeError } = await supabase
+    .from("promo_codes")
+    .select("id, discount, created_at")
+    .ilike("code", promoCode.trim())
+    .eq("is_disabled", false)
+    .maybeSingle()
+  if (promoCodeError) {
+    return { error: promoCodeError.message };
+  }
+  if(!promoCodeData) {
+    return { error: "Invalid promo code" };
+  }
+  return { data: { discount: promoCodeData.discount, codeId: promoCodeData.id } };
 }
