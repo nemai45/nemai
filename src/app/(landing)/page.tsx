@@ -1,10 +1,9 @@
-import HeroSection from "@/components/landing/HeroSection"
-import FeaturedArtists from "@/components/landing/FeaturedArtists"
-import HowItWorks from "@/components/landing/HowItWorks"
-import Testimonials from "@/components/landing/Testimonials"
 import CallToAction from "@/components/landing/CallToAction"
+import Faq from "@/components/landing/Faq"
+import FeaturedArtists from "@/components/landing/FeaturedArtists"
+import HeroSection from "@/components/landing/HeroSection"
+import HowItWorks from "@/components/landing/HowItWorks"
 import { getFeaturedArtists } from "@/lib/user"
-import Footer from "@/components/layout/Footer"
 
 export default async function Home() {
   const result = await getFeaturedArtists();
@@ -17,7 +16,7 @@ export default async function Home() {
       <HeroSection />
       <FeaturedArtists artists={artists} />
       <HowItWorks />
-      {/* <Testimonials /> */}
+      <Faq />
       <CallToAction />
     </>
   )

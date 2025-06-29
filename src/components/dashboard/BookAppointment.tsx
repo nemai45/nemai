@@ -232,7 +232,7 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
       setLoading(false)
       return
     } else {
-      if(!data){
+      if (!data) {
         toast.error("Something went wrong")
         setLoading(false)
         return;
@@ -354,6 +354,8 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
                   }
                 </>
                 <>
+                  <span className="text-sm text-red-500">Currently, 30% of the total amount is collected as a token to confirm your booking.
+                    The final price may vary at the Nail Studio based on the design or service you choose. You’ll pay the remaining amount directly to the artist after your service.</span>
                   <Button
                     className="w-full"
                     onClick={handleSubmitBooking}

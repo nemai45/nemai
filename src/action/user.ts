@@ -12,7 +12,7 @@ import {
   Service
 } from "@/lib/type";
 import { getArtistDue } from "@/lib/user";
-import { timeToMinutes, uploadToCloudinary } from "@/lib/utils";
+import { shouldAllowCancel, timeToMinutes, uploadToCloudinary } from "@/lib/utils";
 import supabaseAdmin from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -1450,14 +1450,22 @@ export const createOrder = async (booking: Booking, addOns: AddOnBooking) => {
   if (serviceError) {
     return { error: serviceError.message };
   }
-
-  const { data: addOnsData, error: addOnsError } = await supabase
+  let addOnsData: { id: string, name: string, price: number, count: number }[] = [];
+   if(addOns.length > 0){
+    const { data: addOnsDetails, error: addOnsError } = await supabase
     .from("add_on")
     .select("id, name, price, count")
     .in("id", addOns.map((addOn) => addOn.add_on_id));
-  if (addOnsError) {
-    return { error: addOnsError.message };
-  }
+    if (addOnsError) {
+      return { error: addOnsError.message };
+    }
+    addOnsData = addOnsDetails.map((addOn) => ({
+      id: addOn.id,
+      name: addOn.name,
+      price: addOn.price,
+      count: addOn.count,
+    }));
+   }
 
   const totalAmount = serviceData.price + addOnsData.reduce((acc, addOn) => acc + addOn.price * addOn.count, 0);
   const tokenAmount = Math.ceil((totalAmount * 0.3) / 50) * 50
@@ -1524,6 +1532,9 @@ export const cancelBooking = async (bookingId: string, reason: string) => {
   }
   if(bookingData.status !== "paid") {
     return { error: "You haven't paid for this booking, so it is not valid" };
+  }
+  if(!shouldAllowCancel(bookingData.date, bookingData.start_time)) {
+    return { error: "You can only cancel this booking within 36 hours of the booking time" };
   }
   const { error: cancelError } = await supabase.from("order").update({
     status: "cancel_requested",

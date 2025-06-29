@@ -30,7 +30,7 @@ const TermsAndConditions = () => {
         <Subsection title="For Clients:">
           <ul className="list-disc ml-6 space-y-1">
             <li>Bookings can be made through the platform with selected artists.</li>
-            <li>Cancellations must be done at least 24 hours prior to the appointment to avoid penalties.</li>
+            <li>Cancellations must be done at least <b>36</b> hours prior to the appointment to avoid penalties.</li>
             <li>No-shows or last-minute cancellations may lead to partial or full charge.</li>
           </ul>
         </Subsection>

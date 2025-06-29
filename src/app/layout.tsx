@@ -8,8 +8,8 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Némai",
-  description: "Connect with talented nail artists and book your next manicure masterpiece in just a few clicks.",
+  title: "Nemai - Book Nail Artists in Surat",
+  description: "India's first platform to book nail artists near you. Explore designs, book appointments, and confirm your booking in just a few clicks.",
 }
 
 export default function RootLayout({

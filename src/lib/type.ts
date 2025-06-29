@@ -200,6 +200,7 @@ export const bookingInfoSchema = z.object({
   date: z.string(),
   client_address: z.string().nullable(),
   status: z.enum(["pending", "paid", "cancel_requested", "cancelled"]),
+  paid_amount: z.number(),
 })
 
 export type BookingInfo = z.infer<typeof bookingInfoSchema>;
