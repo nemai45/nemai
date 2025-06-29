@@ -7,9 +7,13 @@ import { redirect } from 'next/navigation'
 const page = async () => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !user.email) {
+  if (!user) {
     return redirect('/login')
   }
+  if(!user.email && !user.phone) {
+    return redirect('/login')
+  }
+  
   const role = await getUserRole()
   if (!role) {
     return redirect('/login')
@@ -24,9 +28,9 @@ const page = async () => {
     console.error(verifiedPhone.error)
     return redirect('/login')
   }
-
+  
   return (
-    <OnBoarding phone={verifiedPhone.data} email={user.email} role={role} areas={areas.data} />
+    <OnBoarding phone={verifiedPhone.data} email={user.email && user.email.length > 0 ? user.email : undefined} role={role} areas={areas.data} />
   )
 }
 

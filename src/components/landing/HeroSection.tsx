@@ -50,6 +50,8 @@ const HeroSection = async () => {
                 src="/hero.jpg"
                 alt="Beautiful nail art"
                 className="object-cover w-full h-full"
+                width={500}
+                height={500}
               />
             </div>
           </div>

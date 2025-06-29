@@ -20,6 +20,7 @@ export function useUser() {
           data: { session },
           error,
         } = await supabase.auth.getSession()
+        console.log(error, session)
         if (error) throw error
  
         if (session) {

@@ -43,7 +43,7 @@ export const getProfile = async (
   role: string
 ): Promise<Result<CombinedInfo>> => {
   const supabase = await createClient();
-  console.log(userId, role);
+
   const { data: personal, error: personalError } = await supabase
     .from("users")
     .select("first_name, last_name, phone_no, email")
@@ -55,7 +55,11 @@ export const getProfile = async (
   if (!personal) {
     return { error: "Something went wrong!!" };
   }
-  const personalInfo = personalInfoSchema.safeParse(personal);
+
+  const personalInfo = personalInfoSchema.safeParse({
+    ...personal,
+    email: personal.email ?? undefined,
+  });
   if (!personalInfo.success) {
     return { error: "Something went wrong!!" };
   }

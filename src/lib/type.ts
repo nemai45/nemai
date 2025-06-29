@@ -5,7 +5,7 @@ export type Result<T> = { data: T } | { error: string };
 const indianPhonePattern = /^\d{10}$/;
 
 export const personalInfoSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().optional(),
   first_name: z.string().min(1, { message: "First name is required" }),
   last_name: z.string().min(1, { message: "Last name is required" }),
   phone_no: z
