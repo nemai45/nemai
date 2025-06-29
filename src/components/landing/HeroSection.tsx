@@ -47,7 +47,7 @@ const HeroSection = async () => {
           <div className="relative rounded-2xl bg-white p-2 shadow-xl border border-unicorn-purple/10 animate-float">
             <div className="aspect-square rounded-xl overflow-hidden relative">
               <Image
-                src="./hero.jpg"
+                src="/hero.jpg"
                 alt="Beautiful nail art"
                 className="object-cover w-full h-full"
               />
