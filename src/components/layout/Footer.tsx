@@ -6,7 +6,7 @@ export default function Footer() {
   return (
     <footer className=" text-unicorn-dark py-3 px-4">
       <div className="flex items-center justify-center">
-        <span className="text-sm text-muted-foreground">NéMai is India's first dedicated platform for booking nail artists. Find the best nail technicians in your area and book your appointment in just a few clicks.</span>
+        <span className="text-sm text-muted-foreground">NéMai is India&apos;s first dedicated platform for booking nail artists. Find the best nail technicians in your area and book your appointment in just a few clicks.</span>
       </div>
       <Separator className='my-4' />
       <div className="max-w-7xl mx-auto">
