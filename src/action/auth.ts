@@ -134,7 +134,6 @@ export async function verifyOtpAndCreateSession(
       return { error: signInError.message };
     }
     redirect("/onboarding");
-    return null;
   }
 
   if (isLogin) {
