@@ -14,7 +14,7 @@ const faqData = [
   {
     question: "Is NéMai only for nail services in Surat?",
     answer:
-      "Currently, NéMai is focused on helping clients in Surat find verified nail artists for services like gel nails, overlays, bridal nail art, and more. We’re expanding soon to other cities across India.",
+      "Currently, NéMai is focused on helping clients in Surat find verified nail artists for services like gel nails, overlays, bridal nail art, and more. We're expanding soon to other cities across India.",
   },
   {
     question: "What types of nail services can I book on NéMai?",
@@ -39,32 +39,52 @@ const faqData = [
   {
     question: "Why is NéMai better than booking through Instagram or WhatsApp?",
     answer:
-      "With NéMai, there’s no DM waiting, no confusion, and no double bookings. You can instantly see artist availability, confirm your slot, and manage your bookings all in one place — DM-free and stress-free.",
+      "With NéMai, there's no DM waiting, no confusion, and no double bookings. You can instantly see artist availability, confirm your slot, and manage your bookings all in one place — DM-free and stress-free.",
   },
 ];
 
 const Faq = () => {
   return (
-    <section className="max-w-3xl mx-auto py-16 px-6 sm:px-8">
-      <h2 className="text-4xl font-extrabold mb-10 text-center text-gray-900">
-        Frequently Asked Questions
-      </h2>
-      <Accordion
-        type="single"
-        collapsible
-        className="w-full divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white shadow-sm"
-      >
-        {faqData.map((faq, index) => (
-          <AccordionItem key={index} value={`faq${index + 1}`}>
-            <AccordionTrigger className="text-lg font-medium py-4 px-5 hover:bg-gray-50 transition rounded-md">
-              {faq.question}
-            </AccordionTrigger>
-            <AccordionContent className="px-5 pb-5 text-gray-700 text-sm leading-relaxed">
-              {faq.answer}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
+            Frequently Asked Questions
+          </h2>
+          <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+            Everything you need to know about booking nail artists on NéMai
+          </p>
+        </div>
+
+        {/* FAQ Accordion */}
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+          <Accordion
+            type="single"
+            collapsible
+            className="w-full"
+          >
+            {faqData.map((faq, index) => (
+              <AccordionItem 
+                key={index} 
+                value={`faq${index + 1}`}
+                className="border-b border-gray-100 last:border-b-0"
+              >
+                <AccordionTrigger className="text-left text-base sm:text-lg font-semibold py-6 px-6 sm:px-8 hover:bg-gradient-to-r hover:from-pink-50 hover:to-purple-50 transition-all duration-300 text-gray-800 group">
+                  <span className="pr-4 leading-relaxed group-hover:text-purple-700 transition-colors">
+                    {faq.question}
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="px-6 sm:px-8 pb-6 text-gray-600 text-sm sm:text-base leading-relaxed">
+                  <div className="pt-2 border-t border-gray-50">
+                    {faq.answer}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
+      </div>
     </section>
   );
 };
