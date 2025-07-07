@@ -7,10 +7,12 @@ import {
   BlockedDate,
   Booking,
   CombinedInfo,
+  CreatePayment,
   Result,
   Service
 } from "@/lib/type";
-import { timeToMinutes, uploadToCloudinary } from "@/lib/utils";
+import { getArtistDue } from "@/lib/user";
+import { shouldAllowCancel, timeToMinutes, uploadToCloudinary } from "@/lib/utils";
 import supabaseAdmin from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -76,17 +78,17 @@ export const onBoardUser = async (data: CombinedInfo, logo: File | null) => {
     first_name: personal.first_name,
     last_name: personal.last_name,
     phone_no: personal.phone_no,
-    business_name: professional?.business_name,
-    logo: professional?.logo || undefined,
-    address: professional?.address,
-    bio: professional?.bio || undefined,
-    upi_id: professional?.upi_id,
-    no_of_artists: professional?.no_of_artists,
-    booking_month_limit: professional?.booking_month_limit,
-    location: professional?.location || undefined,
+    business_name: professional?.business_name || null,
+    logo: professional?.logo || null,
+    address: professional?.address || null,
+    bio: professional?.bio || null,
+    upi_id: professional?.upi_id || null,
+    no_of_artists: professional?.no_of_artists || null,
+    booking_month_limit: professional?.booking_month_limit || null,
+    location: professional?.location || null,
     area: parseInt(professional?.area || "0"),
-    is_work_from_home: professional?.is_work_from_home,
-    is_available_at_client_home: professional?.is_available_at_client_home,
+    is_work_from_home: professional?.is_work_from_home || null,
+    is_available_at_client_home: professional?.is_available_at_client_home || null,
   });
 
   if (rpcError) {
@@ -1143,7 +1145,7 @@ export const deleteBlockedDate = async (id: string, artistId?: string) => {
   };
 };
 
-export const bookService = async (booking: Booking, addOns: AddOnBooking, razorpayId: string, paidAmount: number, totalAmount: number) => {
+export const bookService = async (booking: Booking, addOns: AddOnBooking, razorpayId: string, paidAmount: number, totalAmount: number, promoCodeId?: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -1174,6 +1176,21 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking, razorp
     return {  
       error: userError.message,
     };
+  }
+  let promoCodeData: { id: string, discount: number } | null = null;
+  if(promoCodeId) {
+    const { data: promoCodeDataDB, error: promoCodeError } = await supabase
+    .from("promo_codes")
+    .select("id, discount")
+    .eq("id", promoCodeId)
+    .single();
+    if (promoCodeError) {
+      return { error: promoCodeError.message };
+    }
+    if(!promoCodeDataDB) {
+      return { error: "Invalid promo code" };
+    }
+    promoCodeData = promoCodeDataDB;
   }
 
   const { data: serviceData, error: serviceError } = await supabase
@@ -1319,7 +1336,8 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking, razorp
       client_address: booking.location_type === "client_home" ? booking.address : null,
       razorpay_id: razorpayId,
       paid_amount: paidAmount,
-      total_amount: totalAmount,
+      total_amount: totalAmount - (totalAmount * (promoCodeData?.discount || 0) / 100),
+      promo_code: promoCodeId,
     })
     .select("id")
     .single();
@@ -1419,7 +1437,7 @@ export const removeFeaturedArtist = async (artistId: string): Promise<Result<str
   return { data: "Artist removed from featured artists" };
 }
 
-export const createOrder = async (booking: Booking, addOns: AddOnBooking) => {
+export const createOrder = async (booking: Booking, addOns: AddOnBooking, promoCodeId?: string) => {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
   if (error) {
@@ -1448,14 +1466,22 @@ export const createOrder = async (booking: Booking, addOns: AddOnBooking) => {
   if (serviceError) {
     return { error: serviceError.message };
   }
-
-  const { data: addOnsData, error: addOnsError } = await supabase
+  let addOnsData: { id: string, name: string, price: number, count: number }[] = [];
+   if(addOns.length > 0){
+    const { data: addOnsDetails, error: addOnsError } = await supabase
     .from("add_on")
     .select("id, name, price, count")
     .in("id", addOns.map((addOn) => addOn.add_on_id));
-  if (addOnsError) {
-    return { error: addOnsError.message };
-  }
+    if (addOnsError) {
+      return { error: addOnsError.message };
+    }
+    addOnsData = addOnsDetails.map((addOn) => ({
+      id: addOn.id,
+      name: addOn.name,
+      price: addOn.price,
+      count: addOn.count,
+    }));
+   }
 
   const totalAmount = serviceData.price + addOnsData.reduce((acc, addOn) => acc + addOn.price * addOn.count, 0);
   const tokenAmount = Math.ceil((totalAmount * 0.3) / 50) * 50
@@ -1470,7 +1496,7 @@ export const createOrder = async (booking: Booking, addOns: AddOnBooking) => {
   }
   try{
     const order = await razorpay.orders.create(options);
-    const { error: bookingError } = await bookService(booking, addOns, order.id, Math.max(tokenAmount, 200), totalAmount);
+    const { error: bookingError } = await bookService(booking, addOns, order.id, Math.max(tokenAmount, 200), totalAmount, promoCodeId);
     if (bookingError) {
       return { error: bookingError };
     }
@@ -1523,6 +1549,9 @@ export const cancelBooking = async (bookingId: string, reason: string) => {
   if(bookingData.status !== "paid") {
     return { error: "You haven't paid for this booking, so it is not valid" };
   }
+  if(!shouldAllowCancel(bookingData.date, bookingData.start_time)) {
+    return { error: "You can only cancel this booking within 36 hours of the booking time" };
+  }
   const { error: cancelError } = await supabase.from("order").update({
     status: "cancel_requested",
     cancel_message: reason,
@@ -1532,4 +1561,111 @@ export const cancelBooking = async (bookingId: string, reason: string) => {
   }
   revalidatePath("/customer-dashboard/bookings");
   return { error: null };
+}
+
+export const createPayment = async (payment: CreatePayment) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if(role !== "admin") {
+    return { error: "User is not an admin" };
+  }
+  const result = await getArtistDue(payment.artist_id);
+  if('error' in result) {
+    return { error: result.error };
+  }
+  if(result.data < payment.amount) {
+    return { error: "Amount is greater than due" };
+  }
+  const { error: paymentError } = await supabase.from("payments").insert({
+    artist_id: payment.artist_id,
+    amount: payment.amount,
+    notes: payment.notes,
+  });
+  if(paymentError) {
+    return { error: paymentError.message };
+  }
+  revalidatePath("/admin/payments");
+  return { error: null };
+}
+
+export const disableArtist = async (artistId: string) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if(role !== "admin") {  
+    return { error: "User is not an admin" };
+  }
+  const { error: DBError } = await supabase.from("artist_profile").update({
+    disabled: true,
+  }).eq("id", artistId);
+  if(DBError) {
+    return { error: DBError.message };
+  }
+  revalidatePath("/admin/artists");
+  return { error: null };
+}
+
+export const enableArtist = async (artistId: string) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if(role !== "admin") {
+    return { error: "User is not an admin" };
+  }
+  const { error: DBError } = await supabase.from("artist_profile").update({
+    disabled: false,
+  }).eq("id", artistId);
+  if(DBError) {
+    return { error: DBError.message };
+  }
+  revalidatePath("/admin/artists");
+  return { error: null };
+}
+
+export const getPromoCodeDiscount = async (promoCode: string): Promise<Result<{discount: number, codeId: string}>> => {
+  const supabase = await createClient();
+  const { data, error: DBError } = await supabase.auth.getUser();
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if(role !== "customer") {
+    return { error: "User is not a customer" };
+  }
+  console.log(promoCode)
+  const { data: promoCodeData, error: promoCodeError } = await supabase
+    .from("promo_codes")
+    .select("id, discount, created_at")
+    .ilike("code", promoCode.trim())
+    .eq("is_disabled", false)
+    .maybeSingle()
+  if (promoCodeError) {
+    return { error: promoCodeError.message };
+  }
+  if(!promoCodeData) {
+    return { error: "Invalid promo code" };
+  }
+  return { data: { discount: promoCodeData.discount, codeId: promoCodeData.id } };
 }

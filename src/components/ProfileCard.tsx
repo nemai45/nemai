@@ -58,18 +58,18 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
     const [showResend, setShowResend] = useState<boolean>(false);
     const [verificationId, setVerificationId] = useState<string | null>(null);
     const [isVerified, setIsVerified] = useState<boolean>(!!personalInfo.phone_no);
-
+    
     const form = useForm({
         resolver: zodResolver(combinedSchema),
         defaultValues: {
             personal: personalInfo,
-            professional: {
+            professional: professionalInfo ? {
                 ...professionalInfo,
                 logo: professionalInfo?.logo || '',
-            }
+            } : null
         },
     });
-
+    
     const { user, loading: isLoad, error, role } = useUser();
     const router = useRouter();
 
@@ -99,7 +99,7 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
             setLoading(false);
             return;
         }
-        if (!data.professional?.is_work_from_home && !data.professional?.is_available_at_client_home) {
+        if (role === "artist" && !data.professional?.is_work_from_home && !data.professional?.is_available_at_client_home) {
             toast.error("At least one of the options work from studio or available at client home must be selected");
             setLoading(false);
             return;
@@ -144,7 +144,7 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
 
     const sendPhoneOtp = async () => {
         const phoneNumber = form.getValues('personal.phone_no')
-        if(phoneNumber.length !== 10){
+        if (phoneNumber.length !== 10) {
             toast.error("Please enter a valid phone number")
             return
         }
@@ -165,13 +165,12 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
         }
         setLoading(false)
     }
-
     return (
         <>
             <Form {...form}>
                 {loading && <NailLoader />}
                 <form
-                    onSubmit={form.handleSubmit(onSubmit)}
+                    onSubmit={form.handleSubmit(onSubmit)}     
                     className="w-full max-w-3xl space-y-6"
                 >
                     <Card>
@@ -205,19 +204,20 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
                                             </FormItem>
                                         )}
                                     />
-                                    <FormField
-                                        control={form.control}
-                                        name="personal.email"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Email</FormLabel>
-                                                <FormControl>
-                                                    <Input {...field} readOnly />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
+                                    {user.email && (
+                                        <FormField
+                                            control={form.control}
+                                            name="personal.email"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Email</FormLabel>
+                                                    <FormControl>
+                                                        <Input {...field} readOnly value={field.value} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />)}
                                     <FormField
                                         control={form.control}
                                         name="personal.phone_no"
@@ -234,9 +234,9 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
                                     {
                                         isOnBoarding && (
                                             <>
-                                                <Button type="button" onClick={sendPhoneOtp} disabled={isVerified}>
+                                                {!isVerified && <Button type="button" onClick={sendPhoneOtp} disabled={isVerified}>
                                                     Verify Phone Number
-                                                </Button>
+                                                </Button>}
                                                 <OtpDialog showResend={showResend} setShowResend={setShowResend} verificationId={verificationId} setVerificationId={setVerificationId} phoneNumber={form.getValues('personal.phone_no')} open={open} onOpenChange={setOpen} timeLeft={timeLeft} setTimeLeft={setTimeLeft} isVerified={isVerified} setIsVerified={setIsVerified} />
                                             </>
                                         )
@@ -455,7 +455,7 @@ const ProfileCard: FC<ProfileCardProps> = ({ personalInfo, professionalInfo, han
                         </CardContent>
 
                         <CardFooter className="flex justify-end">
-                            <Button type="submit" disabled={loading || form.formState.isSubmitting}>Save</Button>
+                            <Button disabled={loading || form.formState.isSubmitting}>Save</Button>
                         </CardFooter>
                     </Card>
                 </form>

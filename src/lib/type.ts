@@ -5,7 +5,7 @@ export type Result<T> = { data: T } | { error: string };
 const indianPhonePattern = /^\d{10}$/;
 
 export const personalInfoSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().optional(),
   first_name: z.string().min(1, { message: "First name is required" }),
   last_name: z.string().min(1, { message: "Last name is required" }),
   phone_no: z
@@ -200,6 +200,8 @@ export const bookingInfoSchema = z.object({
   date: z.string(),
   client_address: z.string().nullable(),
   status: z.enum(["pending", "paid", "cancel_requested", "cancelled"]),
+  paid_amount: z.number(),
+  total_amount: z.number(),
 })
 
 export type BookingInfo = z.infer<typeof bookingInfoSchema>;
@@ -212,6 +214,7 @@ export const artistSchema = z.object({
   }),
   logo: z.string().nullable(),
   is_featured: z.boolean(),
+  disabled: z.boolean(),
 })
 
 export type Artist = z.infer<typeof artistSchema>;
@@ -240,7 +243,7 @@ export interface User {
   id: string;
   first_name: string | null;
   last_name: string | null;
-  email: string;
+  email: string | null;
   phone_no: string | null;
   role: string;
   created_at: string;
@@ -257,10 +260,38 @@ export interface CanceledBooking {
   id: string;
   name: string;
   phone_no: string | null;
-  email: string;
+  email: string | null;
   service: string;
   start_time: number;
   date: string;
   cancel_message: string;
+  created_at: string;
+}
+
+export interface ArtistPayment {
+  id: string;
+  name: string;
+  upi_id: string;
+  due: number;
+}
+
+export interface CreatePayment {
+  artist_id: string;
+  amount: number;
+  notes: string;
+}
+
+export interface Payment {
+  id: string;
+  name: string;
+  amount: number;
+  notes: string;
+  created_at: string;
+}
+
+export interface ArtistPaymentHistory {
+  id: string;
+  amount: number;
+  notes: string;
   created_at: string;
 }

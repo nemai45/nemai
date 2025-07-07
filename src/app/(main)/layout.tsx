@@ -58,7 +58,8 @@ const layout = async ({
       title: "Canceled Bookings",
       path: "/admin/cancel-bookings",
       icon: "XIcon",
-    }
+    },
+    { title: "Payments", path: "/admin/payments", icon: "CreditCard" },
   ];
   const artistMenuItems: SidebarMenuItemType[] = [
     { title: "Bookings", path: "/artist-dashboard", icon: "Calendar" },
@@ -91,15 +92,15 @@ const layout = async ({
     menuItems = customerMenuItems
   }
 
-  let unReadNotifications 
-  if(role === "artist") {
+  let unReadNotifications
+  if (role === "artist") {
     const result = await getNotificationCount();
-    if("error" in result) {
+    if ("error" in result) {
       return <div>{result.error}</div>;
     }
     unReadNotifications = result.data;
   }
-  
+
   return (
     <QueryProvider>
       <SidebarProvider defaultOpen={true}>

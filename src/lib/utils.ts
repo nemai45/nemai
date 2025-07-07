@@ -139,3 +139,11 @@ export const getCroppedImg = async (
     );
   });
 };
+
+export const shouldAllowCancel = (bookingData: string, startTime: number) => {
+  const bookingDate = new Date(bookingData);
+  bookingDate.setHours(0, startTime, 0, 0);
+  const cutoffTime = new Date(bookingDate.getTime() - 36 * 60 * 60 * 1000);
+  const now = new Date();
+  return now < cutoffTime;
+}

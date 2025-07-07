@@ -1,6 +1,7 @@
 import { getUserRole } from "@/lib/get-user-role"
 import { createClient } from "@/utils/supabase/server"
 import Link from "next/link"
+import Image from "next/image"
 
 const HeroSection = async () => {
   const supabase = await createClient()
@@ -45,10 +46,12 @@ const HeroSection = async () => {
 
           <div className="relative rounded-2xl bg-white p-2 shadow-xl border border-unicorn-purple/10 animate-float">
             <div className="aspect-square rounded-xl overflow-hidden relative">
-              <img
-                src="./hero.jpg"
+              <Image
+                src="/hero.jpg"
                 alt="Beautiful nail art"
                 className="object-cover w-full h-full"
+                width={500}
+                height={500}
               />
             </div>
           </div>

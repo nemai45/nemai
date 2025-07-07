@@ -26,16 +26,15 @@ const Profile = async ({ id }: ProfileProps) => {
     }
     const result = await getProfile(id ?? user.id, role === "admin" ? "artist" : role);
     if ('error' in result) {
-        console.error(result.error)
+        console.error(result.error, "result.error")
         return <Error error={result.error} />
     } 
 
     const area = await getAreas();
     if ('error' in area) {
-        console.error(area.error)
+        console.error(area.error, "area.error")
         return <Error error={area.error} />
     }
-    
     return (
         <div className="flex items-center justify-center w-full h-full p-4">
             <ProfileCard

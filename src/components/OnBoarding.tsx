@@ -3,8 +3,9 @@ import { onBoardUser } from '@/action/user'
 import { PersonalInfo, ProfessionalInfo } from '@/lib/type'
 import { FC, useState } from 'react'
 import ProfileCard from './ProfileCard'
+
 interface OnBoardingProps {
-  email: string;
+  email: string | undefined;
   role: string;
   areas: {id: number, name: string}[]
   phone: string | null
@@ -12,7 +13,7 @@ interface OnBoardingProps {
 
 const OnBoarding:FC<OnBoardingProps> = ({ email, role, areas, phone }) => {
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
-    email: email,
+    email: email ,
     first_name: '',
     last_name: '',
     phone_no: phone || ''

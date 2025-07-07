@@ -24,10 +24,10 @@ export default function ContactUsPage() {
                         </div>
                         <div className="flex-1">
                             <h2 className="text-lg font-semibold text-gray-900 mb-2">
-                                Call Us (+91 94289 27753)
+                                Call Us (+91 99091 66092)
                             </h2>
                             <p className="text-gray-600 text-sm">
-                                We are here to support between 10:00 am to 08:00 pm
+                                We are here to support 24X7
                             </p>
                         </div>
                     </div>
@@ -64,7 +64,7 @@ export default function ContactUsPage() {
                         </div>
                         <div className="flex-1">
                             <h2 className="text-lg font-semibold text-gray-900 mb-2">
-                                WhatsApp Us
+                                WhatsApp Us on +91 99091 66092
                             </h2>
                             <p className="text-gray-600 text-sm">
                                 We reply to all the message!
@@ -103,13 +103,15 @@ export default function ContactUsPage() {
                             <div className="flex items-center gap-4">
 
                                 {/* Facebook */}
-                                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+                                {/* <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
                                     <Facebook size={24} className="text-unicorn" />
-                                </div>
+                                </div> */}
 
                                 {/* Instagram */}
                                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 rounded-lg flex items-center justify-center">
-                                    <Instagram size={24} className="text-unicorn" />
+                                    <Link href="https://www.instagram.com/nemai._/" target='_blank'>
+                                        <Instagram size={24} className="text-unicorn" />
+                                    </Link>
                                 </div>
                             </div>
                         </div>

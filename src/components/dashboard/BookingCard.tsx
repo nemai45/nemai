@@ -10,7 +10,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useUser } from '@/hooks/use-user';
 import type { BookingInfo } from '@/lib/type';
-import { minutesToTime } from '@/lib/utils';
+import { minutesToTime, shouldAllowCancel } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ChevronDown, ChevronUp, Clock, MapPin, User } from 'lucide-react';
 import { useState } from 'react';
@@ -26,8 +26,7 @@ export function BookingCard({ booking }: BookingCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const formattedTime = minutesToTime(booking.start_time);
   const formattedDate = format(new Date(booking.date), 'EEEE, MMMM d, yyyy');
-  const addOnTotal = booking.add_on.reduce((sum, addon) => sum + (addon.price * addon.count), 0);
-  const totalPrice = booking.service.price + addOnTotal;
+  const totalPrice = booking.total_amount;
   const [reason, setReason] = useState("");
   const [isCancel, setIsCancel] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -77,7 +76,7 @@ export function BookingCard({ booking }: BookingCardProps) {
               ) : (
                 <div className="flex items-center gap-1">
                   <MapPin className="h-3 w-3 text-primary" />
-                  <span className="text-sm font-medium">Artist&apos;s address</span>
+                  <span className="text-sm font-medium">Artist&apos;s location</span>
                 </div>
               )}
             </div>
@@ -88,7 +87,13 @@ export function BookingCard({ booking }: BookingCardProps) {
               >
                 <Clock className="h-3 w-3" /> {durationText}
               </Badge>
+              <Badge variant="outline" className="bg-primary/10 text-primary dark:bg-primary/20 flex items-center gap-1">
+                {
+                  (new Date(booking.date) < new Date()) && "Completed" 
+                }
+              </Badge>
               {
+                shouldAllowCancel(booking.date, booking.start_time) && (
                 <>
                   {(role === "customer" && booking.status === "paid") && (
                     <Button disabled={isLoading} variant="destructive" onClick={() => setIsCancel(true)}>
@@ -101,6 +106,7 @@ export function BookingCard({ booking }: BookingCardProps) {
                     )
                   }
                 </>
+                )
               }
             </div>
           </div>
@@ -115,6 +121,7 @@ export function BookingCard({ booking }: BookingCardProps) {
 
             <div className="text-right">
               <span className="text-lg font-semibold">{totalPrice.toFixed(2)} ₹</span>
+              <p className="text-xs text-muted-foreground">Paid Amount: {booking.paid_amount.toFixed(2)} ₹</p>
               <p className="text-xs text-muted-foreground">Service: {booking.service.price.toFixed(2)} ₹</p>
             </div>
           </div>
