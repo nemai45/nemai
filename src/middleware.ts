@@ -7,6 +7,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|api/webhook/razorpay|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/webhook/razorpay|sitemap.xml|robots.txt|google0e1480d09a990711.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
