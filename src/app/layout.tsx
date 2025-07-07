@@ -19,12 +19,24 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script type="application/ld+json">
+          {
+            `{
+              "@context" : "https://schema.org",
+              "@type" : "WebSite",
+              "name" : "Némai",
+              "url" : "https://nemai.vercel.app/"
+            }`
+          }
+        </script>
+      </head>
       <body className={inter.className}>
         <TooltipProvider>
           <div className="flex flex-col min-h-screen">
             <main className="flex-grow">{children}</main>
           </div>
-          <Toaster richColors/>
+          <Toaster richColors />
         </TooltipProvider>
       </body>
     </html>
