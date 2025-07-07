@@ -70,8 +70,8 @@ const Faq = () => {
                 value={`faq${index + 1}`}
                 className="border-b border-gray-100 last:border-b-0"
               >
-                <AccordionTrigger className="text-left text-base sm:text-lg font-semibold my-6 px-6 sm:px-8 hover:bg-gradient-to-r hover:from-pink-50 hover:to-purple-50 transition-all duration-300 text-gray-800 group">
-                  <span className="pr-4 mb-2 leading-relaxed group-hover:text-purple-700 transition-colors">
+                <AccordionTrigger className="text-left text-base sm:text-lg font-semibold py-6 px-6 sm:px-8 hover:bg-gradient-to-r hover:from-pink-50 hover:to-purple-50 transition-all duration-300 text-gray-800 group" style={{ height: '100%' }}>
+                  <span className="pr-4 leading-relaxed group-hover:text-purple-700 transition-colors">
                     {faq.question}
                   </span>
                 </AccordionTrigger>
