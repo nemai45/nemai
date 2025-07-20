@@ -33,7 +33,7 @@ const HeroSection = async () => {
                 Connecting You to Beauty Experts✨
               </h1>
               <p className="mt-6 text-lg md:text-xl text-muted-foreground">
-                Connect with talented nail artists and book your next magical expirence in just a few clicks.
+                Connect with talented nail artists and book your next magical experience in just a few clicks.
               </p>
             </div>
 
