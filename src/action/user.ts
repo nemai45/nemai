@@ -1186,7 +1186,7 @@ export const bookService = async (
   totalAmount: number,
   promoCodeAmount: number,
   discountAmount: number,
-  promoCodeId?: string
+  promoCodeId?: string,
 ) => {
   const supabase = await createClient();
   const {
@@ -1209,16 +1209,18 @@ export const bookService = async (
       error: "User is not a customer",
     };
   }
-  const { data: userData, error: userError } = await supabase
-    .from("users")
-    .select("first_name, last_name")
-    .eq("id", user.id)
+
+  const { data: serviceData, error: serviceError } = await supabase
+    .from("services")
+    .select("id, name, price, duration, artist_id")
+    .eq("id", booking.service_id)
     .single();
-  if (userError) {
+  if (serviceError) {
     return {
-      error: userError.message,
+      error: serviceError.message,
     };
   }
+
   let promoCodeData: { id: string; discount: number } | null = null;
   if (promoCodeId) {
     const { data: promoCodeDataDB, error: promoCodeError } = await supabase
@@ -1233,23 +1235,6 @@ export const bookService = async (
       return { error: "Invalid promo code" };
     }
     promoCodeData = promoCodeDataDB;
-  }
-
-  const { data: serviceData, error: serviceError } = await supabase
-    .from("services")
-    .select("id, duration, artist_id, name")
-    .eq("id", booking.service_id)
-    .single();
-
-  if (serviceError) {
-    if (serviceError.code === "PGRST116") {
-      return {
-        error: "Service not found",
-      };
-    }
-    return {
-      error: serviceError.message,
-    };
   }
 
   const startTime = booking.start_time;
@@ -1513,22 +1498,16 @@ export const createOrder = async (
   if (role !== "customer") {
     return { error: "User is not a customer" };
   }
-  const { data: userData, error: userError } = await supabase
-    .from("users")
-    .select("id, first_name, last_name, email, phone_no")
-    .eq("id", data.user.id)
-    .single();
-  if (userError) {
-    return { error: userError.message };
+  const [userRes, serviceRes] = await Promise.all([
+    supabase.from("users").select("id, first_name, last_name, email, phone_no").eq("id", data.user.id).single(),
+    supabase.from("services").select("id, name, price, duration, artist_id").eq("id", booking.service_id).single()
+  ]);
+  if (userRes.error || serviceRes.error) {
+    return { error: userRes.error?.message || serviceRes.error?.message };
   }
-  const { data: serviceData, error: serviceError } = await supabase
-    .from("services")
-    .select("id, name, price")
-    .eq("id", booking.service_id)
-    .single();
-  if (serviceError) {
-    return { error: serviceError.message };
-  }
+  const userData = userRes.data;
+  const serviceData = serviceRes.data;
+
   const addOnsMap = new Map<string, number>();
   for (const addOn of addOns) {
     addOnsMap.set(addOn.add_on_id, addOn.count);
@@ -1598,19 +1577,6 @@ export const createOrder = async (
   };
   try {
     const order = await razorpay.orders.create(options);
-    const { error: bookingError } = await bookService(
-      booking,
-      addOns,
-      order.id,
-      finalAmount,
-      paymentDetails.finalAmount,
-      paymentDetails.promoCodeAmount,
-      paymentDetails.discountAmount,
-      promoCodeId
-    );
-    if (bookingError) {
-      return { error: bookingError };
-    }
     return {
       data: {
         order_id: order.id,
@@ -1618,6 +1584,7 @@ export const createOrder = async (
         email: userData.email,
         phone: userData.phone_no,
         tokenAmount: finalAmount,
+        paymentDetails: paymentDetails,
       },
       error: null,
     };

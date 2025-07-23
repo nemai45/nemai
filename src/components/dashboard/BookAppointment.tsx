@@ -1,6 +1,6 @@
 "use client"
 
-import { createOrder, getPromoCodeDiscount } from "@/action/user"
+import { bookService, createOrder, getPromoCodeDiscount } from "@/action/user"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -241,6 +241,21 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
         toast.error("Something went wrong")
         setLoading(false)
         return;
+      }
+      const { error: bookingError } = await bookService(
+        booking.data,
+        addOnBooking.data,
+        data.order_id,
+        data.tokenAmount,
+        data.paymentDetails.finalAmount,
+        data.paymentDetails.promoCodeAmount,
+        data.paymentDetails.discountAmount,
+        promoCode?.codeId
+      );
+      if (bookingError) {
+        toast.error(bookingError)
+        setLoading(false)
+        return
       }
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
