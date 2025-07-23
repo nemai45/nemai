@@ -28,6 +28,7 @@ export const professionalInfoSchema = z.object({
   location: z.string().nullable(),
   is_work_from_home: z.boolean().default(false),
   is_available_at_client_home: z.boolean().default(false),
+  discount: z.number().nullable(),
 });
 
 export const combinedSchema = z.object({
@@ -202,6 +203,8 @@ export const bookingInfoSchema = z.object({
   status: z.enum(["pending", "paid", "cancel_requested", "cancelled"]),
   paid_amount: z.number(),
   total_amount: z.number(),
+  discount: z.number(),
+  promo_code_discount: z.number(),
 })
 
 export type BookingInfo = z.infer<typeof bookingInfoSchema>;
@@ -215,6 +218,7 @@ export const artistSchema = z.object({
   logo: z.string().nullable(),
   is_featured: z.boolean(),
   disabled: z.boolean(),
+  discount: z.number(),
 })
 
 export type Artist = z.infer<typeof artistSchema>;

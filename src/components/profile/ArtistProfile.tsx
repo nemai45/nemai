@@ -99,7 +99,7 @@ const ArtistProfile = ({ artistProfile }: ArtistProfileProps) => {
             <CardTitle>Services Offered</CardTitle>
           </CardHeader>
           <CardContent>
-            <ServicesList isBooked={isBooked} setIsBooked={setIsBooked} isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen} services={artistProfile.services} bookedService={bookedService} setBookedService={setBookedService} />
+            <ServicesList discount={artistProfile.professional.discount} isBooked={isBooked} setIsBooked={setIsBooked} isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen} services={artistProfile.services} bookedService={bookedService} setBookedService={setBookedService} />
           </CardContent>
         </Card>
 

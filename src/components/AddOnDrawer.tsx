@@ -20,9 +20,10 @@ interface AddOnDrawerProps {
     setIsBooked: (isBooked: boolean) => void
     bookedService: BookedService | null
     setBookedService: (bookedService: BookedService | null) => void
+    discount: number | null
 }
 
-const AddOnDrawer = ({ isDrawerOpen, setIsDrawerOpen, services, isBooked, setIsBooked, bookedService, setBookedService }: AddOnDrawerProps) => {
+const AddOnDrawer = ({ isDrawerOpen, setIsDrawerOpen, services, isBooked, setIsBooked, bookedService, setBookedService, discount }: AddOnDrawerProps) => {
     if (!bookedService) return null
     return (
         <>
@@ -54,7 +55,16 @@ const AddOnDrawer = ({ isDrawerOpen, setIsDrawerOpen, services, isBooked, setIsB
                                             </Label>
                                         </div>
                                         <div className="text-sm">
-                                            +RS{addon.price}/nail
+                                            {
+                                                discount ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="line-through">₹{addon.price}</span>
+                                                        <span>₹{Math.ceil(addon.price - (addon.price * discount / 100))}</span>
+                                                    </div>
+                                                ) : (
+                                                    <span>₹{addon.price}</span>
+                                                )
+                                            }
                                         </div>
                                     </div>
                                 ))}

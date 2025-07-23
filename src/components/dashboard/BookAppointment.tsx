@@ -64,8 +64,11 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
     const add_on_price = bookedService.add_on.reduce((sum, addon) => {
       return sum + addon.price * addon.count
     }, 0)
+    const discount = profile.professional.discount || 0
+    const totalPrice = basePrice + add_on_price
+    const discountedPrice = totalPrice - (totalPrice * discount / 100)
 
-    return { price: basePrice + add_on_price, duration: bookedService.service.duration }
+    return { price: Math.ceil(discountedPrice), duration: bookedService.service.duration }
   }
 
   const ref = useRef(calculateTotal())
@@ -290,7 +293,16 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
             <div className="space-y-2">
               <div className="text-sm font-medium">Selected Service:</div>
               <div className="text-sm font-medium">{bookedService.service.name}</div>
-              <div className="text-sm font-medium">₹{bookedService.service.price}</div>
+              {
+                profile.professional.discount ? (
+                  <div className="text-sm font-medium flex items-center gap-2">
+                    <span className="line-through">₹{bookedService.service.price}</span>
+                    <span>₹{Math.ceil(bookedService.service.price - (bookedService.service.price * profile.professional.discount / 100))}</span>
+                  </div>
+                ) : (
+                  <div className="text-sm font-medium">₹{bookedService.service.price}</div>
+                )
+              }
               <div className="text-sm font-medium">Duration: {bookedService.service.duration} min</div>
               {bookedService.add_on.some((addon) => addon.count > 0) && (
                 <div className="mt-2 space-y-2">
@@ -301,7 +313,16 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
                       .map((addon) => (
                         <div key={addon.id} className="flex justify-between text-sm">
                           <span>{addon.name}</span>
-                          <span>+₹{addon.price} x {addon.count}</span>
+                          <span className="flex">{
+                            profile.professional.discount ? (
+                              <span className="flex items-center gap-2">
+                                <span className="line-through">+₹{addon.price}</span>
+                                <span>₹{Math.ceil(addon.price - (addon.price * profile.professional.discount / 100))}</span>
+                              </span>
+                            ) : (
+                              <span>+₹{addon.price}</span>
+                            )
+                          } x {addon.count}</span>
                         </div>
                       ))}
                   </div>
@@ -316,7 +337,7 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
                         ₹{ref.current.price}
                       </span>
                       <span className="text-green-600 font-semibold">
-                        ₹{ref.current.price - (ref.current.price * promoCode.discount / 100)}
+                        ₹{Math.ceil(ref.current.price - (ref.current.price * promoCode.discount / 100))}
                       </span>
                       <span className="ml-1 text-gray-600">• {ref.current.duration} min</span>
                     </span>

@@ -67,7 +67,7 @@ export const getProfile = async (
     const { data: professional, error: professionalError } = await supabase
       .from("artist_profile")
       .select(
-        "business_name, logo, bio, address, upi_id, no_of_artists, booking_month_limit, location, area, is_work_from_home, is_available_at_client_home"
+        "business_name, logo, bio, address, upi_id, no_of_artists, booking_month_limit, location, area, is_work_from_home, is_available_at_client_home, discount"
       )
       .eq("id", userId)
       .maybeSingle();
@@ -464,7 +464,7 @@ export const getBookings = async (): Promise<Result<BookingInfo[]>> => {
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, total_amount, paid_amount, services(id, artist_profile(business_name), name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status"
+      "id, total_amount, paid_amount, services(id, artist_profile(business_name), name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status, discount, promo_code_discount"
     )
     .eq("user_id", user.id)
     .not("status", "eq", "cancelled")
@@ -495,6 +495,8 @@ export const getBookings = async (): Promise<Result<BookingInfo[]>> => {
     date: booking.date,
     client_address: booking.client_address,
     status: booking.status,
+    discount: booking.discount,
+    promo_code_discount: booking.promo_code_discount,
   }));
 
   return { data: info };
@@ -543,7 +545,7 @@ export const getArtistBookings = async (
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, total_amount, paid_amount, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status"
+      "id, total_amount, paid_amount, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status, discount, promo_code_discount"
     )
     .eq("services.artist_id", artistId)
     .not("status", "eq", "cancelled")
@@ -573,6 +575,8 @@ export const getArtistBookings = async (
     date: booking.date,
     client_address: booking.client_address,
     status: booking.status,
+    discount: booking.discount,
+    promo_code_discount: booking.promo_code_discount,
   }));
   return { data: info };
 };
@@ -598,7 +602,7 @@ export const getPastBookings = async (): Promise<Result<BookingInfo[]>> => {
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, total_amount, paid_amount, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status"
+      "id, total_amount, paid_amount, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status, discount, promo_code_discount"
     )
     .eq("services.artist_id", user.id)
     .not("status", "eq", "cancelled")
@@ -627,6 +631,8 @@ export const getPastBookings = async (): Promise<Result<BookingInfo[]>> => {
     date: booking.date,
     client_address: booking.client_address,
     status: booking.status,
+    discount: booking.discount,
+    promo_code_discount: booking.promo_code_discount,
   }));
   return { data: info };
 };
@@ -649,7 +655,7 @@ export const getArtists = async (): Promise<Result<Artist[]>> => {
   } 
   const { data, error: DBError } = await supabase
     .from("artist_profile")
-    .select("id, business_name, area(name), logo, is_featured, disabled");
+    .select("id, business_name, area(name), logo, is_featured, disabled, discount");
   if (DBError) {
     return { error: DBError.message };
   }
@@ -907,7 +913,7 @@ export const getFeaturedArtists = async (): Promise<Result<Artist[]>> => {
   const supabase = await createClient();
   const { data, error: DBError } = await supabase
     .from("artist_profile")
-    .select("id, business_name, area(name), logo, is_featured, disabled")
+    .select("id, business_name, area(name), logo, is_featured, disabled, discount")
     .eq("is_featured", true);
   if (DBError) {
     return { error: DBError.message };
@@ -963,7 +969,7 @@ export const getArtistsDue = async (): Promise<Result<ArtistPayment[]>> => {
   }
   const { data: orders, error: ordersError } = await supabase
     .from("order")
-    .select("id, total_amount, paid_amount, created_at, date, services!inner(artist_profile!inner(id, business_name, upi_id))")
+    .select("id, total_amount, promo_code_discount, paid_amount, created_at, date, services!inner(artist_profile!inner(id, business_name, upi_id))")
     .lt("date", format(new Date(), "yyyy-MM-dd"))
     .eq("status", "paid")
   if (ordersError) {
@@ -980,7 +986,7 @@ export const getArtistsDue = async (): Promise<Result<ArtistPayment[]>> => {
   const dueMap = new Map<string, { name: string, due: number, upi_id: string }>();
   for (const order of orders) {
     const artistId = order.services.artist_profile.id;
-    const due = order.paid_amount;
+    const due = order.paid_amount + order.promo_code_discount;
     if (dueMap.has(artistId)) {
       dueMap.set(artistId, { name: order.services.artist_profile.business_name, due: dueMap.get(artistId)!.due + due, upi_id: order.services.artist_profile.upi_id });
     } else {
@@ -1026,7 +1032,7 @@ export const getArtistDue = async (artistId: string): Promise<Result<number>> =>
 
   const { data: orders, error: ordersError } = await supabase
     .from("order")
-    .select("id, total_amount, paid_amount, created_at, date, services!inner(artist_profile!inner(id, business_name, upi_id))")
+    .select("id, total_amount, paid_amount, discount, promo_code_discount, created_at, date, services!inner(artist_profile!inner(id, business_name, upi_id))")
     .lt("date", format(new Date(), "yyyy-MM-dd"))
     .eq("status", "paid")
     .eq("services.artist_profile.id", artistId)
@@ -1040,7 +1046,7 @@ export const getArtistDue = async (artistId: string): Promise<Result<number>> =>
   if (paymentsError) {
     return { error: paymentsError.message };
   }
-  const due = orders.reduce((sum, order) => sum + order.paid_amount, 0);
+  const due = orders.reduce((sum, order) => sum + order.paid_amount + order.promo_code_discount, 0);
   const paid = payments.reduce((sum, payment) => sum + payment.amount, 0);
   return { data: due - paid };
 }

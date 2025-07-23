@@ -63,6 +63,21 @@ export const timeToMinutes = (time: string) => {
   return hours * 60 + mins;
 }
 
+export const getFinalAmount = (servicePrice: number, addOns: { name: string; price: number; count: number }[], promoCodeDiscount: number, discount: number) => {
+  const addOnsPrice = addOns.reduce((acc, addOn) => acc + addOn.price * addOn.count, 0);
+  const totalAmount = servicePrice + addOnsPrice;
+  const discountAmount = Math.floor(totalAmount * discount / 100);
+  const beforePromoCodeAmount = totalAmount - discountAmount;
+  const promoCodeAmount = Math.floor(beforePromoCodeAmount * promoCodeDiscount / 100);
+  const finalAmount = beforePromoCodeAmount - promoCodeAmount;
+
+  return {
+    finalAmount,
+    promoCodeAmount,
+    discountAmount,
+  }
+}
+
 
 export const uploadToCloudinary = async (
   formData: FormData,

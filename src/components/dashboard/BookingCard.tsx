@@ -122,7 +122,13 @@ export function BookingCard({ booking }: BookingCardProps) {
             <div className="text-right">
               <span className="text-lg font-semibold">{totalPrice.toFixed(2)} ₹</span>
               <p className="text-xs text-muted-foreground">Paid Amount: {booking.paid_amount.toFixed(2)} ₹</p>
-              <p className="text-xs text-muted-foreground">Service: {booking.service.price.toFixed(2)} ₹</p>
+              <p className="text-xs text-muted-foreground">Service: {booking.service.price} ₹</p>
+              {booking.discount > 0 && (
+                <p className="text-xs text-muted-foreground">Artist Discount: {booking.discount} ₹</p>
+              )}
+              {booking.promo_code_discount > 0 && (
+                <p className="text-xs text-muted-foreground">Promo Code Discount: {booking.promo_code_discount} ₹</p>
+              )}
             </div>
           </div>
           {booking.add_on.length > 0 && (

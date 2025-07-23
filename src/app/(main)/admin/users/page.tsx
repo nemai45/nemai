@@ -1,7 +1,7 @@
-import { DataTable } from '@/components/DataTable';
 import { getUsers } from '@/lib/user';
 import React from 'react'
 import { columns } from './column';
+import { DataTable } from './data-table';
 
 const page = async () => {
     const result = await getUsers();

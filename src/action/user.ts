@@ -9,10 +9,15 @@ import {
   CombinedInfo,
   CreatePayment,
   Result,
-  Service
+  Service,
 } from "@/lib/type";
 import { getArtistDue } from "@/lib/user";
-import { shouldAllowCancel, timeToMinutes, uploadToCloudinary } from "@/lib/utils";
+import {
+  getFinalAmount,
+  shouldAllowCancel,
+  timeToMinutes,
+  uploadToCloudinary,
+} from "@/lib/utils";
 import supabaseAdmin from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -40,7 +45,11 @@ export const onBoardUser = async (data: CombinedInfo, logo: File | null) => {
       error: "User not found",
     };
   }
-  const { data: isVerified, error: authError } = await supabase.from("users").select("is_phone_verified").eq("id", user.id).single();
+  const { data: isVerified, error: authError } = await supabase
+    .from("users")
+    .select("is_phone_verified")
+    .eq("id", user.id)
+    .single();
   if (authError) {
     return {
       error: authError.message,
@@ -55,9 +64,13 @@ export const onBoardUser = async (data: CombinedInfo, logo: File | null) => {
   const { personal, professional } = data;
 
   if (professional && logo) {
-    if (!professional.is_work_from_home && !professional.is_available_at_client_home) {
+    if (
+      !professional.is_work_from_home &&
+      !professional.is_available_at_client_home
+    ) {
       return {
-        error: "At least one of the options work from studio or available at client home must be selected",
+        error:
+          "At least one of the options work from studio or available at client home must be selected",
       };
     }
     const fileName = `${user.id}-${Date.now()}`;
@@ -88,7 +101,8 @@ export const onBoardUser = async (data: CombinedInfo, logo: File | null) => {
     location: professional?.location || null,
     area: parseInt(professional?.area || "0"),
     is_work_from_home: professional?.is_work_from_home || null,
-    is_available_at_client_home: professional?.is_available_at_client_home || null,
+    is_available_at_client_home:
+      professional?.is_available_at_client_home || null,
   });
 
   if (rpcError) {
@@ -107,8 +121,11 @@ export const onBoardUser = async (data: CombinedInfo, logo: File | null) => {
   };
 };
 
-export const updateUser = async (data: CombinedInfo, logo: File | null, id?: string ) => {
-  console.log(id)
+export const updateUser = async (
+  data: CombinedInfo,
+  logo: File | null,
+  id?: string
+) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -140,9 +157,13 @@ export const updateUser = async (data: CombinedInfo, logo: File | null, id?: str
     };
   }
   if ((role === "artist" || role === "admin") && professional) {
-    if (!professional.is_work_from_home && !professional.is_available_at_client_home) {
+    if (
+      !professional.is_work_from_home &&
+      !professional.is_available_at_client_home
+    ) {
       return {
-        error: "At least one of the options work from studio or available at client home must be selected",
+        error:
+          "At least one of the options work from studio or available at client home must be selected",
       };
     }
     if (logo) {
@@ -296,7 +317,6 @@ export const updateArtistService = async (service: Service, id?: string) => {
       error: serviceError.message,
     };
   }
-  console.log(serviceData.artist_id, user.id, id)
   if (serviceData.artist_id !== user.id && serviceData.artist_id !== id) {
     return {
       error: "You are not authorized to update this service",
@@ -535,7 +555,11 @@ export const addCoverImage = async (formData: FormData, id?: string) => {
   };
 };
 
-export const addAlbumImage = async (formData: FormData, albumId: string, id?: string) => {
+export const addAlbumImage = async (
+  formData: FormData,
+  albumId: string,
+  id?: string
+) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -673,14 +697,15 @@ export const deleteAlbumImage = async (
   }
 
   if (isLatest.cover_image === fullPath) {
-    const { data: latestAlbumImage, error: latestAlbumImageError } = await supabase
-      .from("images")
-      .select("url")
-      .eq("album_id", albumId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-      
+    const { data: latestAlbumImage, error: latestAlbumImageError } =
+      await supabase
+        .from("images")
+        .select("url")
+        .eq("album_id", albumId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
     if (latestAlbumImageError) {
       return {
         error: latestAlbumImageError.message,
@@ -701,7 +726,6 @@ export const deleteAlbumImage = async (
     }
   }
 
-
   const { error: err } = await supabase.storage
     .from("images")
     .remove([fullPath.split("/").pop()!]);
@@ -717,7 +741,11 @@ export const deleteAlbumImage = async (
   };
 };
 
-export const deleteCoverImage = async (imageId: string, fullPath: string, id?: string) => {
+export const deleteCoverImage = async (
+  imageId: string,
+  fullPath: string,
+  id?: string
+) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -780,7 +808,6 @@ export const deleteCoverImage = async (imageId: string, fullPath: string, id?: s
 };
 
 export const addAvailability = async (data: Availability, id?: string) => {
-  console.log(id)
   const supabase = await createClient();
   const {
     data: { user },
@@ -898,7 +925,10 @@ export const deleteAvailability = async (id: string, artistId?: string) => {
       error: availabilityError.message,
     };
   }
-  if (availabilityData.artist_id !== user.id && availabilityData.artist_id !== artistId) {
+  if (
+    availabilityData.artist_id !== user.id &&
+    availabilityData.artist_id !== artistId
+  ) {
     return {
       error: "You are not authorized to delete this availability",
     };
@@ -1123,7 +1153,10 @@ export const deleteBlockedDate = async (id: string, artistId?: string) => {
       error: blockedDateError.message,
     };
   }
-  if (blockedDateData.artist_id !== user.id && blockedDateData.artist_id !== artistId ) {
+  if (
+    blockedDateData.artist_id !== user.id &&
+    blockedDateData.artist_id !== artistId
+  ) {
     return {
       error: "You are not authorized to delete this blocked date",
     };
@@ -1145,7 +1178,16 @@ export const deleteBlockedDate = async (id: string, artistId?: string) => {
   };
 };
 
-export const bookService = async (booking: Booking, addOns: AddOnBooking, razorpayId: string, paidAmount: number, totalAmount: number, promoCodeId?: string) => {
+export const bookService = async (
+  booking: Booking,
+  addOns: AddOnBooking,
+  razorpayId: string,
+  paidAmount: number,
+  totalAmount: number,
+  promoCodeAmount: number,
+  discountAmount: number,
+  promoCodeId?: string
+) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -1173,21 +1215,21 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking, razorp
     .eq("id", user.id)
     .single();
   if (userError) {
-    return {  
+    return {
       error: userError.message,
     };
   }
-  let promoCodeData: { id: string, discount: number } | null = null;
-  if(promoCodeId) {
+  let promoCodeData: { id: string; discount: number } | null = null;
+  if (promoCodeId) {
     const { data: promoCodeDataDB, error: promoCodeError } = await supabase
-    .from("promo_codes")
-    .select("id, discount")
-    .eq("id", promoCodeId)
-    .single();
+      .from("promo_codes")
+      .select("id, discount")
+      .eq("id", promoCodeId)
+      .single();
     if (promoCodeError) {
       return { error: promoCodeError.message };
     }
-    if(!promoCodeDataDB) {
+    if (!promoCodeDataDB) {
       return { error: "Invalid promo code" };
     }
     promoCodeData = promoCodeDataDB;
@@ -1320,12 +1362,12 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking, razorp
     };
   }
 
-  if(booking.location_type === "client_home" && !booking.address) {
+  if (booking.location_type === "client_home" && !booking.address) {
     return {
       error: "Address is required",
     };
   }
-  
+
   const { data: newOrder, error: DBError } = await supabase
     .from("order")
     .insert({
@@ -1333,11 +1375,14 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking, razorp
       start_time: booking.start_time,
       date: booking.date,
       user_id: user.id,
-      client_address: booking.location_type === "client_home" ? booking.address : null,
+      client_address:
+      booking.location_type === "client_home" ? booking.address : null,
       razorpay_id: razorpayId,
       paid_amount: paidAmount,
-      total_amount: totalAmount - (totalAmount * (promoCodeData?.discount || 0) / 100),
+      total_amount: totalAmount,
       promo_code: promoCodeId,
+      discount: discountAmount,
+      promo_code_discount: promoCodeAmount,
     })
     .select("id")
     .single();
@@ -1371,7 +1416,9 @@ export const bookService = async (booking: Booking, addOns: AddOnBooking, razorp
   };
 };
 
-export const deleteArtist = async (artistId: string): Promise<Result<string>> => {
+export const deleteArtist = async (
+  artistId: string
+): Promise<Result<string>> => {
   const supabase = await createClient();
   const { data, error: DBError } = await supabase.auth.getUser();
   if (DBError) {
@@ -1384,14 +1431,18 @@ export const deleteArtist = async (artistId: string): Promise<Result<string>> =>
   if (role !== "admin") {
     return { error: "User is not an admin" };
   }
-  const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(artistId);
+  const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(
+    artistId
+  );
   if (authError) {
     return { error: authError.message };
   }
   return { data: "Artist deleted successfully" };
 };
 
-export const addFeaturedArtist = async (artistId: string): Promise<Result<string>> => {
+export const addFeaturedArtist = async (
+  artistId: string
+): Promise<Result<string>> => {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
   if (error) {
@@ -1404,17 +1455,22 @@ export const addFeaturedArtist = async (artistId: string): Promise<Result<string
   if (role !== "admin") {
     return { error: "User is not an admin" };
   }
-  const { error: DBError } = await supabase.from("artist_profile").update({
-    is_featured: true,
-  }).eq("id", artistId);
+  const { error: DBError } = await supabase
+    .from("artist_profile")
+    .update({
+      is_featured: true,
+    })
+    .eq("id", artistId);
   if (DBError) {
     return { error: DBError.message };
   }
   revalidatePath("/admin/artists");
   return { data: "Artist added to featured artists" };
-}
+};
 
-export const removeFeaturedArtist = async (artistId: string): Promise<Result<string>> => {
+export const removeFeaturedArtist = async (
+  artistId: string
+): Promise<Result<string>> => {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
   if (error) {
@@ -1427,17 +1483,24 @@ export const removeFeaturedArtist = async (artistId: string): Promise<Result<str
   if (role !== "admin") {
     return { error: "User is not an admin" };
   }
-  const { error: DBError } = await supabase.from("artist_profile").update({
-    is_featured: false,
-  }).eq("id", artistId);
+  const { error: DBError } = await supabase
+    .from("artist_profile")
+    .update({
+      is_featured: false,
+    })
+    .eq("id", artistId);
   if (DBError) {
     return { error: DBError.message };
   }
   revalidatePath("/admin/artists");
   return { data: "Artist removed from featured artists" };
-}
+};
 
-export const createOrder = async (booking: Booking, addOns: AddOnBooking, promoCodeId?: string) => {
+export const createOrder = async (
+  booking: Booking,
+  addOns: AddOnBooking,
+  promoCodeId?: string
+) => {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
   if (error) {
@@ -1466,53 +1529,103 @@ export const createOrder = async (booking: Booking, addOns: AddOnBooking, promoC
   if (serviceError) {
     return { error: serviceError.message };
   }
-  let addOnsData: { id: string, name: string, price: number, count: number }[] = [];
-   if(addOns.length > 0){
+  const addOnsMap = new Map<string, number>();
+  for (const addOn of addOns) {
+    addOnsMap.set(addOn.add_on_id, addOn.count);
+  }
+  let addOnsData: { id: string; name: string; price: number; count: number }[] =
+    [];
+  const addOnIds = addOns.map((addOn) => addOn.add_on_id);
+  if (addOnIds.length > 0) {
     const { data: addOnsDetails, error: addOnsError } = await supabase
-    .from("add_on")
-    .select("id, name, price, count")
-    .in("id", addOns.map((addOn) => addOn.add_on_id));
+      .from("add_on")
+      .select("id, name, price")
+      .in("id", addOnIds);
+
     if (addOnsError) {
       return { error: addOnsError.message };
     }
+
     addOnsData = addOnsDetails.map((addOn) => ({
       id: addOn.id,
       name: addOn.name,
       price: addOn.price,
-      count: addOn.count,
+      count: addOnsMap.get(addOn.id) || 0,
     }));
-   }
+  }
 
-  const totalAmount = serviceData.price + addOnsData.reduce((acc, addOn) => acc + addOn.price * addOn.count, 0);
-  const tokenAmount = Math.ceil((totalAmount * 0.3) / 50) * 50
+  let promoCodeDiscount = 0;
+  if (promoCodeId) {
+    const { data: promoCodeData, error: promoCodeError } = await supabase
+      .from("promo_codes")
+      .select("id, discount")
+      .eq("id", promoCodeId)
+      .single();
+    if (promoCodeError) {
+      return { error: promoCodeError.message };
+    }
+    if (promoCodeData) {
+      promoCodeDiscount = promoCodeData.discount;
+    }
+  }
+
+  const { data: artistData, error: artistError } = await supabase
+    .from("services")
+    .select("artist_profile!inner(discount)")
+    .eq("id", serviceData.id)
+    .single();
+  if (artistError) {
+    return { error: artistError.message };
+  }
+  const artistDiscount = artistData.artist_profile.discount;
+  const paymentDetails = getFinalAmount(
+    serviceData.price,
+    addOnsData,
+    promoCodeDiscount,
+    artistDiscount
+  );
+  const tokenAmount = Math.ceil((paymentDetails.finalAmount * 0.3) / 50) * 50;
+  const finalAmount =
+    paymentDetails.finalAmount < 200 ? paymentDetails.finalAmount : Math.max(tokenAmount, 200);
   const options = {
-    amount: Math.max(tokenAmount, 200) * 100,
+    amount: finalAmount * 100,
     currency: "INR",
     receipt: `${userData.id.slice(0, 8)}_${Date.now()}`,
     notes: {
       user_id: data.user.id,
       user_name: `${userData.first_name} ${userData.last_name}`,
     },
-  }
-  try{
+  };
+  try {
     const order = await razorpay.orders.create(options);
-    const { error: bookingError } = await bookService(booking, addOns, order.id, Math.max(tokenAmount, 200), totalAmount, promoCodeId);
+    const { error: bookingError } = await bookService(
+      booking,
+      addOns,
+      order.id,
+      finalAmount,
+      paymentDetails.finalAmount,
+      paymentDetails.promoCodeAmount,
+      paymentDetails.discountAmount,
+      promoCodeId
+    );
     if (bookingError) {
       return { error: bookingError };
     }
-    return { data: {
-      order_id: order.id,
-      name: userData.first_name + " " + userData.last_name,
-      email: userData.email,
-      phone: userData.phone_no,
-      tokenAmount: Math.max(tokenAmount, 200),
-    }, error: null };
-  }catch(error: any){
-    console.log(error)
+    return {
+      data: {
+        order_id: order.id,
+        name: userData.first_name + " " + userData.last_name,
+        email: userData.email,
+        phone: userData.phone_no,
+        tokenAmount: finalAmount,
+      },
+      error: null,
+    };
+  } catch (error: any) {
+    console.log(error);
     return { error: error.description };
   }
-
-}
+};
 
 export const cancelBooking = async (bookingId: string, reason: string) => {
   const supabase = await createClient();
@@ -1537,7 +1650,9 @@ export const cancelBooking = async (bookingId: string, reason: string) => {
   }
   const { data: bookingData, error: bookingError } = await supabase
     .from("order")
-    .select("id, status, user_id, services!inner(artist_id, name), date, start_time")
+    .select(
+      "id, status, user_id, services!inner(artist_id, name), date, start_time"
+    )
     .eq("id", bookingId)
     .single();
   if (bookingError) {
@@ -1546,22 +1661,28 @@ export const cancelBooking = async (bookingId: string, reason: string) => {
   if (bookingData.user_id !== data.user.id) {
     return { error: "You are not authorized to cancel this booking" };
   }
-  if(bookingData.status !== "paid") {
+  if (bookingData.status !== "paid") {
     return { error: "You haven't paid for this booking, so it is not valid" };
   }
-  if(!shouldAllowCancel(bookingData.date, bookingData.start_time)) {
-    return { error: "You can only cancel this booking within 36 hours of the booking time" };
+  if (!shouldAllowCancel(bookingData.date, bookingData.start_time)) {
+    return {
+      error:
+        "You can only cancel this booking within 36 hours of the booking time",
+    };
   }
-  const { error: cancelError } = await supabase.from("order").update({
-    status: "cancel_requested",
-    cancel_message: reason,
-  }).eq("id", bookingId);
+  const { error: cancelError } = await supabase
+    .from("order")
+    .update({
+      status: "cancel_requested",
+      cancel_message: reason,
+    })
+    .eq("id", bookingId);
   if (cancelError) {
     return { error: cancelError.message };
   }
   revalidatePath("/customer-dashboard/bookings");
   return { error: null };
-}
+};
 
 export const createPayment = async (payment: CreatePayment) => {
   const supabase = await createClient();
@@ -1573,14 +1694,14 @@ export const createPayment = async (payment: CreatePayment) => {
     return { error: "User not found" };
   }
   const role = await getUserRole();
-  if(role !== "admin") {
+  if (role !== "admin") {
     return { error: "User is not an admin" };
   }
   const result = await getArtistDue(payment.artist_id);
-  if('error' in result) {
+  if ("error" in result) {
     return { error: result.error };
   }
-  if(result.data < payment.amount) {
+  if (result.data < payment.amount) {
     return { error: "Amount is greater than due" };
   }
   const { error: paymentError } = await supabase.from("payments").insert({
@@ -1588,12 +1709,13 @@ export const createPayment = async (payment: CreatePayment) => {
     amount: payment.amount,
     notes: payment.notes,
   });
-  if(paymentError) {
+  console.log(paymentError);
+  if (paymentError) {
     return { error: paymentError.message };
   }
   revalidatePath("/admin/payments");
   return { error: null };
-}
+};
 
 export const disableArtist = async (artistId: string) => {
   const supabase = await createClient();
@@ -1605,18 +1727,21 @@ export const disableArtist = async (artistId: string) => {
     return { error: "User not found" };
   }
   const role = await getUserRole();
-  if(role !== "admin") {  
+  if (role !== "admin") {
     return { error: "User is not an admin" };
   }
-  const { error: DBError } = await supabase.from("artist_profile").update({
-    disabled: true,
-  }).eq("id", artistId);
-  if(DBError) {
+  const { error: DBError } = await supabase
+    .from("artist_profile")
+    .update({
+      disabled: true,
+    })
+    .eq("id", artistId);
+  if (DBError) {
     return { error: DBError.message };
   }
   revalidatePath("/admin/artists");
   return { error: null };
-}
+};
 
 export const enableArtist = async (artistId: string) => {
   const supabase = await createClient();
@@ -1628,20 +1753,25 @@ export const enableArtist = async (artistId: string) => {
     return { error: "User not found" };
   }
   const role = await getUserRole();
-  if(role !== "admin") {
+  if (role !== "admin") {
     return { error: "User is not an admin" };
   }
-  const { error: DBError } = await supabase.from("artist_profile").update({
-    disabled: false,
-  }).eq("id", artistId);
-  if(DBError) {
+  const { error: DBError } = await supabase
+    .from("artist_profile")
+    .update({
+      disabled: false,
+    })
+    .eq("id", artistId);
+  if (DBError) {
     return { error: DBError.message };
   }
   revalidatePath("/admin/artists");
   return { error: null };
-}
+};
 
-export const getPromoCodeDiscount = async (promoCode: string): Promise<Result<{discount: number, codeId: string}>> => {
+export const getPromoCodeDiscount = async (
+  promoCode: string
+): Promise<Result<{ discount: number; codeId: string }>> => {
   const supabase = await createClient();
   const { data, error: DBError } = await supabase.auth.getUser();
   if (DBError) {
@@ -1651,21 +1781,71 @@ export const getPromoCodeDiscount = async (promoCode: string): Promise<Result<{d
     return { error: "User not found" };
   }
   const role = await getUserRole();
-  if(role !== "customer") {
+  if (role !== "customer") {
     return { error: "User is not a customer" };
   }
-  console.log(promoCode)
   const { data: promoCodeData, error: promoCodeError } = await supabase
     .from("promo_codes")
     .select("id, discount, created_at")
     .ilike("code", promoCode.trim())
     .eq("is_disabled", false)
-    .maybeSingle()
+    .maybeSingle();
   if (promoCodeError) {
     return { error: promoCodeError.message };
   }
-  if(!promoCodeData) {
+  if (!promoCodeData) {
     return { error: "Invalid promo code" };
   }
-  return { data: { discount: promoCodeData.discount, codeId: promoCodeData.id } };
-}
+  return {
+    data: { discount: promoCodeData.discount, codeId: promoCodeData.id },
+  };
+};
+
+export const deleteUser = async (userId: string) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if (role !== "admin") {
+    return { error: "User is not an admin" };
+  }
+  const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(
+    userId
+  );
+  if (authError) {
+    return { error: authError.message };
+  }
+  revalidatePath("/admin/users");
+  return { error: null };
+};
+
+export const updateDiscountForArtist = async (
+  artistId: string,
+  discount: number
+) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  const role = await getUserRole();
+  if (role !== "admin") {
+    return { error: "User is not an admin" };
+  }
+  const { error: DBError } = await supabase
+    .from("artist_profile")
+    .update({
+      discount: discount,
+    })
+    .eq("id", artistId);
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  revalidatePath("/admin/artists");
+  return { error: null };
+};

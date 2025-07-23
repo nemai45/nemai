@@ -1,14 +1,16 @@
 "use client"
-import { addFeaturedArtist, deleteArtist, disableArtist, enableArtist, removeFeaturedArtist } from "@/action/user"
+import { addFeaturedArtist, deleteArtist, disableArtist, enableArtist, removeFeaturedArtist, updateDiscountForArtist } from "@/action/user"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Artist } from "@/lib/type"
-import { Eye, EyeOff, MapPin, Star, StarOff } from "lucide-react"
+import { Eye, EyeOff, MapPin, MoveRight, Star, StarOff, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 import { toast } from "sonner"
 import NailLoader from "../NailLoader"
+import { Input } from "../ui/input"
+import { Badge } from "../ui/badge"
 
 interface ArtistCardProps {
   artist: Artist
@@ -19,6 +21,7 @@ const SUPABASE_BUCKET_URL_PREFIX = "https://ftqdfdhxdtekgjxrlggp.supabase.co/sto
 
 const ArtistCard = ({ artist, role }: ArtistCardProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [discount, setDiscount] = useState(artist.discount);
 
   const disableArtistAction = async () => {
     setIsLoading(true);
@@ -77,6 +80,18 @@ const ArtistCard = ({ artist, role }: ArtistCardProps) => {
     }
     setIsLoading(false);
   }
+
+  const updateDiscount = async () => {
+    setIsLoading(true);
+    const { error } = await updateDiscountForArtist(artist.id, discount);
+    if (error) {  
+      toast.error(error);
+    } else {
+      toast.success("Discount updated successfully");
+    }
+    setIsLoading(false);
+  }
+
   if (isLoading) return <NailLoader />
   return (
     <Card
@@ -86,6 +101,13 @@ const ArtistCard = ({ artist, role }: ArtistCardProps) => {
       <CardHeader>
         <CardTitle className="flex items-center justify-between gap-2">
           {
+            (role === "customer" && artist.discount > 0) && (
+              <Badge className="bg-green-500 text-white">
+                {artist.discount}% off
+              </Badge>
+            )
+          }
+          {
               role === "admin" && (
               artist.is_featured ? (
               <Star onClick={removeFeaturedArtistAction} className="w-8 h-8 text-yellow-500" />
@@ -93,6 +115,16 @@ const ArtistCard = ({ artist, role }: ArtistCardProps) => {
               <StarOff onClick={addFeaturedArtistAction} className="w-8 h-8 text-yellow-500" />
               )
               )
+          }
+          {
+            role === "admin" && (
+              <div className="flex items-center gap-2">
+                <Input type="number" placeholder="Discount" className="w-32 bg-white" value={discount} onChange={(e) => setDiscount(Number(e.target.value))}  />
+                <Button onClick={updateDiscount}>
+                  <ArrowRight />
+                </Button>
+              </div>
+            )
           }
           {
             role === "admin" && (artist.disabled ? (

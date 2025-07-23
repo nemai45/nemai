@@ -30,7 +30,8 @@ const OnBoarding:FC<OnBoardingProps> = ({ email, role, areas, phone }) => {
     booking_month_limit: 0,
     location: null,
     is_work_from_home: false,
-    is_available_at_client_home: false
+    is_available_at_client_home: false,
+    discount: 0
   })
 
 

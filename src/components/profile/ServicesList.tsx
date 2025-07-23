@@ -18,9 +18,10 @@ interface ServicesListProps {
   setIsBooked: (isBooked: boolean) => void;
   bookedService: BookedService | null;
   setBookedService: (bookedService: BookedService | null) => void;
+  discount: number | null ;
 }
 
-const ServicesList = ({ services, isDrawerOpen, setIsDrawerOpen, isBooked, setIsBooked, bookedService, setBookedService }: ServicesListProps) => {
+const ServicesList = ({ services, isDrawerOpen, setIsDrawerOpen, isBooked, setIsBooked, bookedService, setBookedService, discount }: ServicesListProps) => {
   const { user, loading, error, role } = useUser();
   const router = useRouter();
 
@@ -51,7 +52,14 @@ const ServicesList = ({ services, isDrawerOpen, setIsDrawerOpen, isBooked, setIs
               {service.name}
             </CardTitle>
             <div className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg z-10">
-              ₹{service.price}
+              {discount ? (
+                <div className="flex items-center gap-2">
+                  <span className="line-through">₹{service.price}</span>
+                  <span>₹{Math.ceil(service.price - (service.price * discount / 100))}</span>
+                </div>
+              ) : (
+                <span>₹{service.price}</span>
+              )}
             </div>
           </CardHeader>
 
@@ -95,7 +103,7 @@ const ServicesList = ({ services, isDrawerOpen, setIsDrawerOpen, isBooked, setIs
         </Card>
       ))}
       {bookedService && bookedService.add_on.length > 0 &&
-        <AddOnDrawer isBooked={isBooked} setIsBooked={setIsBooked} services={services} isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen} bookedService={bookedService} setBookedService={setBookedService} />}
+        <AddOnDrawer discount={discount} isBooked={isBooked} setIsBooked={setIsBooked} services={services} isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen} bookedService={bookedService} setBookedService={setBookedService} />}
     </div>
   );
 };
