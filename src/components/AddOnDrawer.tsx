@@ -8,9 +8,7 @@ import {
 } from "@/components/ui/drawer"
 import { Label } from "@/components/ui/label"
 import { BookedService, Service } from "@/lib/type"
-import { useState } from "react"
 import Counter from "./Counter"
-import BookAppointment from "./dashboard/BookAppointment"
 
 interface AddOnDrawerProps {
     isDrawerOpen: boolean

@@ -1,7 +1,7 @@
 import axios from "axios";
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
 import { Area } from "react-easy-crop";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -63,19 +63,29 @@ export const timeToMinutes = (time: string) => {
   return hours * 60 + mins;
 }
 
-export const getFinalAmount = (servicePrice: number, addOns: { name: string; price: number; count: number }[], promoCodeDiscount: number, discount: number) => {
+export const getFinalAmount = (servicePrice: number, addOns: { name: string; price: number; count: number }[], promoCodeDiscount: number, discount: number, serviceDiscount: number) => {
   const addOnsPrice = addOns.reduce((acc, addOn) => acc + addOn.price * addOn.count, 0);
-  const totalAmount = servicePrice + addOnsPrice;
-  const discountAmount = Math.floor(totalAmount * discount / 100);
-  const beforePromoCodeAmount = totalAmount - discountAmount;
-  const promoCodeAmount = Math.floor(beforePromoCodeAmount * promoCodeDiscount / 100);
-  const finalAmount = beforePromoCodeAmount - promoCodeAmount;
-
+  const serviceDiscountedPrice = getDiscountedPrice(servicePrice, discount, serviceDiscount)
+  const addOnsDiscountedPrice = getDiscountedPrice(addOnsPrice, discount, 0)
+  const beforePromoCodeDiscount = serviceDiscountedPrice + addOnsDiscountedPrice
+  const afterPromoCodeDiscount = Math.ceil(beforePromoCodeDiscount - (beforePromoCodeDiscount * promoCodeDiscount / 100))
+  const promoCodeDiscountAmount = beforePromoCodeDiscount - afterPromoCodeDiscount
+  const discountAmount = Math.ceil((servicePrice + addOnsPrice) * discount / 100)
+  const serviceDiscountAmount = (servicePrice + addOnsPrice) - (afterPromoCodeDiscount + promoCodeDiscountAmount + discountAmount)
   return {
-    finalAmount,
-    promoCodeAmount,
-    discountAmount,
+    finalAmount: afterPromoCodeDiscount,
+    promoCodeDiscount: promoCodeDiscountAmount,
+    discount: discountAmount,
+    serviceDiscount: serviceDiscountAmount
   }
+}
+
+export const getDiscountedPrice = (price: number, discount: number, serviceDiscount: number) => {
+  const artistDiscount = price * discount / 100
+  const artistPrice = price - artistDiscount
+  const serviceDiscountPrice = artistPrice * serviceDiscount / 100
+  const servicePrice = artistPrice - serviceDiscountPrice
+  return Math.ceil(servicePrice)
 }
 
 

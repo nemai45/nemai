@@ -1,14 +1,17 @@
-import React, { useEffect, useState } from 'react';
+"use client"
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Clock, DollarSign } from 'lucide-react';
-import { BookedService, Service } from '@/lib/type';
-import AddOnDrawer from '../AddOnDrawer';
 import { useUser } from '@/hooks/use-user';
+import { BookedService, Service } from '@/lib/type';
+import { getDiscountedPrice } from '@/lib/utils';
+import { Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import AddOnDrawer from '../AddOnDrawer';
 import Error from '../Error';
 import NailLoader from '../NailLoader';
+
 
 interface ServicesListProps {
   services: Service[];
@@ -55,7 +58,7 @@ const ServicesList = ({ services, isDrawerOpen, setIsDrawerOpen, isBooked, setIs
               {discount ? (
                 <div className="flex items-center gap-2">
                   <span className="line-through">₹{service.price}</span>
-                  <span>₹{Math.ceil(service.price - (service.price * discount / 100))}</span>
+                  <span>₹{getDiscountedPrice(service.price, discount, service.discount)}</span>
                 </div>
               ) : (
                 <span>₹{service.price}</span>

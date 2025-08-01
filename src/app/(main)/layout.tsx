@@ -55,7 +55,7 @@ const layout = async ({
       icon: "Calendar",
     },
     {
-      title: "Canceled Bookings",
+      title: "Cancelled Bookings",
       path: "/admin/cancel-bookings",
       icon: "XIcon",
     },

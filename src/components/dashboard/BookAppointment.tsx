@@ -6,7 +6,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { addOnBookingSchema, ArtistProfile, BookedService, bookingSchema, Service, SlotData } from "@/lib/type"
-import { timeToMinutes } from "@/lib/utils"
+import { getDiscountedPrice, timeToMinutes } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import axios, { AxiosError } from "axios"
 import { format, isToday } from "date-fns"
@@ -64,11 +64,10 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
     const add_on_price = bookedService.add_on.reduce((sum, addon) => {
       return sum + addon.price * addon.count
     }, 0)
-    const discount = profile.professional.discount || 0
-    const totalPrice = basePrice + add_on_price
-    const discountedPrice = totalPrice - (totalPrice * discount / 100)
-
-    return { price: Math.ceil(discountedPrice), duration: bookedService.service.duration }
+    const artistDiscount = profile.professional.discount || 0
+    const servicePrice = getDiscountedPrice(basePrice, artistDiscount, bookedService.service.discount || 0)
+    const addOnPrice = add_on_price - (add_on_price * artistDiscount / 100)
+    return { servicePrice: Math.ceil(servicePrice), addOnPrice: Math.ceil(addOnPrice), duration: bookedService.service.duration }
   }
 
   const ref = useRef(calculateTotal())
@@ -248,8 +247,9 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
         data.order_id,
         data.tokenAmount,
         data.paymentDetails.finalAmount,
-        data.paymentDetails.promoCodeAmount,
-        data.paymentDetails.discountAmount,
+        data.paymentDetails.promoCodeDiscount,
+        data.paymentDetails.discount,
+        data.paymentDetails.serviceDiscount,
         promoCode?.codeId
       );
       if (bookingError) {
@@ -312,7 +312,7 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
                 profile.professional.discount ? (
                   <div className="text-sm font-medium flex items-center gap-2">
                     <span className="line-through">₹{bookedService.service.price}</span>
-                    <span>₹{Math.ceil(bookedService.service.price - (bookedService.service.price * profile.professional.discount / 100))}</span>
+                    <span>₹{ref.current.servicePrice}</span>
                   </div>
                 ) : (
                   <div className="text-sm font-medium">₹{bookedService.service.price}</div>
@@ -324,7 +324,7 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
                   <div className="text-sm font-medium">Selected Enhancements:</div>
                   <div className="space-y-1">
                     {bookedService.add_on
-                      .filter((addon) => addon.count > 0)
+                      .filter((addon) => addon.count > 0) 
                       .map((addon) => (
                         <div key={addon.id} className="flex justify-between text-sm">
                           <span>{addon.name}</span>
@@ -349,16 +349,16 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
                   {promoCode ? (
                     <span className="text-sm text-gray-800">
                       <span className="line-through text-gray-400 mr-2">
-                        ₹{ref.current.price}
+                        ₹{ref.current.servicePrice + ref.current.addOnPrice}
                       </span>
                       <span className="text-green-600 font-semibold">
-                        ₹{Math.ceil(ref.current.price - (ref.current.price * promoCode.discount / 100))}
+                        ₹{Math.ceil(ref.current.servicePrice + ref.current.addOnPrice - ((ref.current.servicePrice + ref.current.addOnPrice) * promoCode.discount / 100))}
                       </span>
                       <span className="ml-1 text-gray-600">• {ref.current.duration} min</span>
                     </span>
                   ) : (
                     <span className="text-sm text-gray-800">
-                      ₹{ref.current.price} • {ref.current.duration} min
+                      ₹{ref.current.servicePrice + ref.current.addOnPrice} • {ref.current.duration} min
                     </span>
                   )}
                 </span>

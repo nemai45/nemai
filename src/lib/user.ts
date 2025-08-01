@@ -361,7 +361,7 @@ export const getArtistServices = async (
   const supabase = await createClient();
   const { data, error: DBError } = await supabase
     .from("services")
-    .select("id, name, description, price, duration, add_on(id, name, price)")
+    .select("id, name, description, price, duration, add_on(id, name, price), discount")
     .eq("artist_id", artistId);
   if (DBError) {
     return {
@@ -464,7 +464,7 @@ export const getBookings = async (): Promise<Result<BookingInfo[]>> => {
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, total_amount, paid_amount, services(id, artist_profile(business_name), name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status, discount, promo_code_discount"
+      "id, total_amount, paid_amount, services(id, artist_profile(business_name), name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status, discount, promo_code_discount, service_discount"
     )
     .eq("user_id", user.id)
     .not("status", "eq", "cancelled")
@@ -497,6 +497,7 @@ export const getBookings = async (): Promise<Result<BookingInfo[]>> => {
     status: booking.status,
     discount: booking.discount,
     promo_code_discount: booking.promo_code_discount,
+    service_discount: booking.service_discount,
   }));
 
   return { data: info };
@@ -545,7 +546,7 @@ export const getArtistBookings = async (
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, total_amount, paid_amount, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status, discount, promo_code_discount"
+      "id, total_amount, paid_amount, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status, discount, promo_code_discount, service_discount"
     )
     .eq("services.artist_id", artistId)
     .not("status", "eq", "cancelled")
@@ -577,6 +578,7 @@ export const getArtistBookings = async (
     status: booking.status,
     discount: booking.discount,
     promo_code_discount: booking.promo_code_discount,
+    service_discount: booking.service_discount,
   }));
   return { data: info };
 };
@@ -602,7 +604,7 @@ export const getPastBookings = async (): Promise<Result<BookingInfo[]>> => {
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, total_amount, paid_amount, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status, discount, promo_code_discount"
+      "id, total_amount, paid_amount, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status, discount, promo_code_discount, service_discount"
     )
     .eq("services.artist_id", user.id)
     .not("status", "eq", "cancelled")
@@ -633,6 +635,7 @@ export const getPastBookings = async (): Promise<Result<BookingInfo[]>> => {
     status: booking.status,
     discount: booking.discount,
     promo_code_discount: booking.promo_code_discount,
+    service_discount: booking.service_discount,
   }));
   return { data: info };
 };

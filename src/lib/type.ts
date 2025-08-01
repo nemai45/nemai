@@ -46,6 +46,7 @@ export const serviceSchema = z.object({
   description: z.string().nullable(),
   price: z.number().min(1, { message: "Price is required" }),
   duration: z.number().min(1, { message: "Duration is required" }),
+  discount: z.number().min(0, { message: "Discount must be at least 0" }).max(100, { message: "Discount must be less than 100" }),
   add_on: z.array(
     z.object({
       id: z.string().optional(),
@@ -205,6 +206,7 @@ export const bookingInfoSchema = z.object({
   total_amount: z.number(),
   discount: z.number(),
   promo_code_discount: z.number(),
+  service_discount: z.number(),
 })
 
 export type BookingInfo = z.infer<typeof bookingInfoSchema>;

@@ -10,10 +10,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Service, serviceSchema } from "@/lib/type"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Clock, Edit, Plus, Trash } from "lucide-react"
-import { FC, useState } from "react"
+import { FC, useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import NailLoader from "../NailLoader"
+import { useUser } from "@/hooks/use-user"
 
 interface ServiceManagerProps {
   services: Service[]
@@ -24,6 +25,12 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services, id }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingService, setEditingService] = useState<Service | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const { role: userRole } = useUser()
+  const [role, setRole] = useState<string | null>(userRole)
+
+  useEffect(() => {
+    setRole(userRole || null)
+  }, [userRole])
 
   const form = useForm<Service>({
     defaultValues: {
@@ -31,6 +38,7 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services, id }) => {
       description: "",
       price: 0,
       duration: 0,
+      discount: 0,
       add_on: [],
     },
     resolver: zodResolver(serviceSchema)
@@ -43,6 +51,7 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services, id }) => {
       description: "",
       price: 0,
       duration: 0,
+      discount: 0,
       add_on: [],
     })
     setIsDialogOpen(true)
@@ -55,6 +64,7 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services, id }) => {
       description: service.description || "",
       price: service.price,
       duration: service.duration,
+      discount: service.discount,
       add_on: service.add_on,
     })
     setIsDialogOpen(true)
@@ -93,6 +103,7 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services, id }) => {
         description: "",
         price: 0,
         duration: 0,
+        discount: 0,
         add_on: [],
       })
       setIsLoading(false)
@@ -115,13 +126,13 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services, id }) => {
 
   const addAddOn = () => {
     const currentAddOns = form.getValues().add_on || []
-    form.setValue("add_on", [...currentAddOns, { name: "", price: 0}])
+    form.setValue("add_on", [...currentAddOns, { name: "", price: 0 }])
   }
 
   const removeAddOn = (index: number) => {
     const currentAddOns = form.getValues().add_on || []
     const updatedAddOns = currentAddOns.map((addOn, i) => {
-      if(i === index) {
+      if (i === index) {
         return {
           ...addOn,
           is_deleted: true,
@@ -130,7 +141,7 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services, id }) => {
       return addOn
     })
     const filteredAddOns = updatedAddOns.filter((addOn) => {
-      if(!addOn.id && addOn.is_deleted) {
+      if (!addOn.id && addOn.is_deleted) {
         return false
       }
       return true
@@ -163,7 +174,7 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services, id }) => {
                 <Card key={service.id!} className="overflow-hidden">
                   <CardContent>
                     <h1 className="text-lg font-bold pb-2">{service.name}</h1>
-                    {<p className="text-sm text-muted-foreground mb-2">{service.description }</p>}
+                    {<p className="text-sm text-muted-foreground mb-2">{service.description}</p>}
                     <div className="flex space-x-4 text-sm">
                       <div className="flex items-center">
                         <span>₹{service.price}</span>
@@ -281,6 +292,28 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services, id }) => {
                     </FormItem>
                   )}
                 />
+                {role === "admin" && <FormField
+                  control={form.control}
+                  name="discount"
+                  render={({ field }: { field: any }) => (
+                    <FormItem>
+                      <FormLabel>Discount (₹)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                }
+
               </div>
 
               <div className="space-y-4">
@@ -301,35 +334,35 @@ const ServiceManager: FC<ServiceManagerProps> = ({ services, id }) => {
                     <div key={index} className="flex gap-2 items-end">
                       <FormField
                         control={form.control}
-                      name={`add_on.${index}.name`}
-                      render={({ field }: { field: any }) => (
-                        <FormItem className="flex-grow">
-                          <FormControl>
-                            <Input min={1} placeholder="Add-on name" {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
+                        name={`add_on.${index}.name`}
+                        render={({ field }: { field: any }) => (
+                          <FormItem className="flex-grow">
+                            <FormControl>
+                              <Input min={1} placeholder="Add-on name" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name={`add_on.${index}.price`}
-                      render={({ field }: { field: any }) => (
-                        <FormItem className="w-24">
-                          <FormControl>
-                            <Input placeholder="Price (per nail)" type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value))} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
+                      <FormField
+                        control={form.control}
+                        name={`add_on.${index}.price`}
+                        render={({ field }: { field: any }) => (
+                          <FormItem className="w-24">
+                            <FormControl>
+                              <Input placeholder="Price (per nail)" type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value))} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
 
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => removeAddOn(index)}
-                    >
-                      <Trash className="h-4 w-4" />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => removeAddOn(index)}
+                      >
+                        <Trash className="h-4 w-4" />
                       </Button>
                     </div>
                   )

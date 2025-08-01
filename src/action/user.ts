@@ -249,6 +249,7 @@ export const addArtistService = async (service: Service, id?: string) => {
       price: service.price,
       duration: service.duration,
       artist_id: id || user.id,
+      discount: 0
     })
     .select()
     .single();
@@ -332,6 +333,20 @@ export const updateArtistService = async (service: Service, id?: string) => {
       duration: service.duration,
     })
     .eq("id", service.id);
+
+  if (service.discount && role === "admin") {
+    const { error: DBError } = await supabase
+      .from("services")
+      .update({
+        discount: service.discount,
+      })
+      .eq("id", service.id);
+    if (DBError) {
+      return {
+        error: DBError.message,
+      };
+    }
+  }
 
   if (DBError) {
     return {
@@ -1186,6 +1201,7 @@ export const bookService = async (
   totalAmount: number,
   promoCodeAmount: number,
   discountAmount: number,
+  serviceDiscountAmount: number,
   promoCodeId?: string,
 ) => {
   const supabase = await createClient();
@@ -1368,6 +1384,7 @@ export const bookService = async (
       promo_code: promoCodeId,
       discount: discountAmount,
       promo_code_discount: promoCodeAmount,
+      service_discount: serviceDiscountAmount,
     })
     .select("id")
     .single();
@@ -1500,7 +1517,7 @@ export const createOrder = async (
   }
   const [userRes, serviceRes] = await Promise.all([
     supabase.from("users").select("id, first_name, last_name, email, phone_no").eq("id", data.user.id).single(),
-    supabase.from("services").select("id, name, price, duration, artist_id").eq("id", booking.service_id).single()
+    supabase.from("services").select("id, name, price, duration, artist_id, discount").eq("id", booking.service_id).single()
   ]);
   if (userRes.error || serviceRes.error) {
     return { error: userRes.error?.message || serviceRes.error?.message };
@@ -1561,7 +1578,8 @@ export const createOrder = async (
     serviceData.price,
     addOnsData,
     promoCodeDiscount,
-    artistDiscount
+    artistDiscount,
+    serviceData.discount
   );
   const tokenAmount = Math.ceil((paymentDetails.finalAmount * 0.3) / 50) * 50;
   const finalAmount =
