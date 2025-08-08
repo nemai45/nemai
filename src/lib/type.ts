@@ -207,6 +207,7 @@ export const bookingInfoSchema = z.object({
   discount: z.number(),
   promo_code_discount: z.number(),
   service_discount: z.number(),
+
 })
 
 export type BookingInfo = z.infer<typeof bookingInfoSchema>;
@@ -300,4 +301,39 @@ export interface ArtistPaymentHistory {
   amount: number;
   notes: string;
   created_at: string;
+}
+
+export interface OrderDetails {
+  id: string;
+  total_amount: number;
+  paid_amount: number;
+  discount: number;
+  promo_code_discount: number;
+  created_at: string;
+  date: string;
+  service_name: string;
+  artist_name: string;
+  user_name: string;
+  status: string;
+  promo_code: string | null;
+}
+
+export interface KeyMatrix {
+  recentArtist: {
+    id: string;
+    business_name: string;
+    logo: string | null;
+  }[];
+  recentUsers: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    phone_no: string | null;
+    email: string | null;
+    created_at: string;
+  }[];
+  totalRevenue: number;
+  totalBookings: number;
+  totalUsers: number;
+  totalArtists: number;
 }

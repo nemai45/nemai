@@ -22,6 +22,8 @@ import {
   ArtistPayment,
   Payment,
   ArtistPaymentHistory,
+  OrderDetails,
+  KeyMatrix,
 } from "./type";
 import { endOfMonth, format, startOfMonth, subMonths } from "date-fns";
 
@@ -1111,4 +1113,112 @@ export const getArtistPayments = async (artistId: string): Promise<Result<Artist
     notes: payment.notes,
     created_at: payment.created_at.toString(),
   }))}
+}
+
+export const getAllOrders = async (): Promise<Result<OrderDetails[]>> => {
+  const supabase = await createClient();
+  const { data, error: DBError } = await supabase.auth.getUser();
+  if (DBError) {
+    return { error: DBError.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if(role !== "admin") {
+    return { error: "User is not an admin" };
+  }
+  const { data: orders, error: ordersError } = await supabase
+    .from("order")
+    .select("id, total_amount, paid_amount, discount, promo_code_discount, created_at, date, services!inner(name, artist_profile!inner(business_name)), users!inner(first_name, last_name), status, promo_codes(code)")
+    .order("created_at", { ascending: false })
+  if (ordersError) {
+    return { error: ordersError.message };
+  }
+  return { data: orders.map((order) => ({
+    id: order.id,
+    total_amount: order.total_amount,
+    paid_amount: order.paid_amount,
+    discount: order.discount,
+    promo_code_discount: order.promo_code_discount,
+    created_at: order.created_at.toString(),
+    date: order.date,
+    service_name: order.services.name,
+    artist_name: order.services.artist_profile.business_name,
+    user_name: order.users.first_name + " " + order.users.last_name,
+    status: order.status,
+    promo_code: order.promo_codes?.code || null,
+  }))}
+}
+
+export const getKeyMatrix = async (): Promise<Result<KeyMatrix>> => {
+  const supabase = await createClient();
+  const { data, error: authError } = await supabase.auth.getUser();
+  if(authError) {
+    return { error: authError.message };
+  }
+  if(!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if(role !== "admin") {
+    return { error: "User is not an admin" };
+  }
+  const { data: recentArtist, error: recentArtistError } = await supabase
+    .from("artist_profile")
+    .select("id, business_name, logo")
+    .order("created_at", { ascending: false })
+    .limit(5);
+  if(recentArtistError) {
+    return { error: recentArtistError.message };
+  }
+  const { data: recentUsers, error: recentUsersError } = await supabase
+    .from("users")
+    .select("id, first_name, last_name, phone_no, email, created_at")
+    .eq("role", "customer")
+    .order("created_at", { ascending: false })
+    .limit(5);
+  if(recentUsersError) {
+    return { error: recentUsersError.message };
+  }
+  const { data: totalRevenueData, error: totalRevenueError } = await supabase
+    .from("order")
+    .select("total_amount")
+    .eq("status", "paid");
+  if(totalRevenueError) {
+    return { error: totalRevenueError.message };
+  }
+  const totalRevenue = totalRevenueData.reduce((sum, data) => sum + data.total_amount, 0);
+  const { data: totalBookingsData, error: totalBookingsError } = await supabase
+    .from("order")
+    .select("id")
+    .eq("status", "paid");
+  if(totalBookingsError) {
+    return { error: totalBookingsError.message };
+  }
+  const totalBookings = totalBookingsData.length;
+  const { data: totalUsersData, error: totalUsersError } = await supabase
+    .from("users")
+    .select("id")
+    .eq("role", "customer");
+  if(totalUsersError) {
+    return { error: totalUsersError.message };
+  }
+  const { data: totalArtistsData, error: totalArtistsError } = await supabase
+    .from("artist_profile")
+    .select("id")
+    .eq("disabled", false);
+  if(totalArtistsError) {
+    return { error: totalArtistsError.message };
+  }
+  const totalArtists = totalArtistsData.length;
+  const totalUsers = totalUsersData.length;
+  return { data: {
+    recentArtist,
+    recentUsers,
+    totalRevenue,
+    totalBookings,
+    totalUsers,
+    totalArtists,
+  }};
 }
