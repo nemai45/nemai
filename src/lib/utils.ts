@@ -172,3 +172,20 @@ export const shouldAllowCancel = (bookingData: string, startTime: number) => {
   const now = new Date();
   return now < cutoffTime;
 }
+
+export function isBookingCompleted(date: string, startTime: number, duration: number): boolean {
+  const bookingDate = new Date(date);
+  const now = new Date();
+  
+  if (bookingDate.toDateString() < now.toDateString()) {
+    return true;
+  }
+  
+  if (bookingDate.toDateString() === now.toDateString()) {
+    const bookingTimeInMinutes = startTime + duration;
+    const nowInMinutes = now.getHours() * 60 + now.getMinutes();
+    return nowInMinutes > bookingTimeInMinutes;
+  }
+  
+  return false;
+}

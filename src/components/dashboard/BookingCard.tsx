@@ -1,4 +1,4 @@
-import { cancelBooking } from '@/action/user';
+import { cancelBooking, submitReview } from '@/action/user';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -10,13 +10,15 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useUser } from '@/hooks/use-user';
 import type { BookingInfo } from '@/lib/type';
-import { minutesToTime, shouldAllowCancel } from '@/lib/utils';
+import { isBookingCompleted, minutesToTime, shouldAllowCancel } from '@/lib/utils';
 import { format } from 'date-fns';
-import { ChevronDown, ChevronUp, Clock, MapPin, User, Calendar, Phone } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, MapPin, User, Calendar, Phone, Star, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Input } from '../ui/input';
 import NailLoader from '../NailLoader';
+import { ReviewDisplay } from '../reviews/ReviewDisplay';
+import { ReviewForm } from '../reviews/ReviewForm';
 
 interface BookingCardProps {
   booking: BookingInfo;
@@ -24,14 +26,19 @@ interface BookingCardProps {
 
 export function BookingCard({ booking }: BookingCardProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const formattedTime = minutesToTime(booking.start_time);
-  const formattedDate = format(new Date(booking.date), 'EEEE, MMMM d, yyyy');
-  const totalPrice = booking.total_amount;
   const [reason, setReason] = useState("");
   const [isCancel, setIsCancel] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
   const { role } = useUser();
+
+  const formattedTime = minutesToTime(booking.start_time);
+  const formattedDate = format(new Date(booking.date), 'EEEE, MMMM d, yyyy');
+  const totalPrice = booking.total_amount;
+  const isCompleted = isBookingCompleted(booking.date, booking.start_time, booking.service.duration);
 
   const cancelBookingAction = async () => {
     setIsLoading(true);
@@ -50,11 +57,23 @@ export function BookingCard({ booking }: BookingCardProps) {
     setIsLoading(false);
   }
 
+  const handleReviewSubmit = async (rating: number, comment: string) => {
+    setIsSubmittingReview(true);
+    const { error } = await submitReview(booking.id, rating, comment);
+    setIsSubmittingReview(false);
+    if (error) {
+      toast.error(error);
+    } else {  
+      toast.success("Review submitted successfully");
+      setShowReviewForm(false);
+    }
+  }
+
   const duration = booking.service.duration;
   const hours = Math.floor(duration / 60);
   const minutes = duration % 60;
   const durationText = `${hours > 0 ? `${hours}h ` : ''}${minutes > 0 ? `${minutes}m` : ''}`;
-  
+
   return (
     <>
       <Card className="w-full gap-2 py-0 overflow-hidden transition-all duration-300 hover:shadow-md">
@@ -75,7 +94,7 @@ export function BookingCard({ booking }: BookingCardProps) {
               >
                 <Clock className="h-3 w-3" /> {durationText}
               </Badge>
-              {(new Date(booking.date) < new Date()) && (
+              {isCompleted && (
                 <Badge variant="outline" className="bg-primary/10 text-primary dark:bg-primary/20">
                   Completed
                 </Badge>
@@ -97,7 +116,7 @@ export function BookingCard({ booking }: BookingCardProps) {
                 </div>
               )}
             </div>
-            
+
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-green-500"></div>
               <span className="text-sm font-medium">{formattedTime}</span>
@@ -113,32 +132,58 @@ export function BookingCard({ booking }: BookingCardProps) {
               </span>
             </div>
 
-            {shouldAllowCancel(booking.date, booking.start_time) && (
-              <div className="flex items-center gap-2">
-                {(role === "customer" && booking.status === "paid") && (
-                  <Button disabled={isLoading} variant="destructive" size="sm" onClick={() => setIsCancel(true)}>
-                    Cancel Booking
-                  </Button>
-                )}
-                {(role === "customer" && booking.status === "cancel_requested") && (
-                  <Badge variant="destructive" className="text-xs font-medium">
-                    Cancellation Requested
-                  </Badge>
-                )}
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {shouldAllowCancel(booking.date, booking.start_time) && (
+                <>
+                  {(role === "customer" && booking.status === "paid") && (
+                    <Button disabled={isLoading} variant="destructive" size="sm" onClick={() => setIsCancel(true)}>
+                      Cancel Booking
+                    </Button>
+                  )}
+                  {(role === "customer" && booking.status === "cancel_requested") && (
+                    <Badge variant="destructive" className="text-xs font-medium">
+                      Cancellation Requested
+                    </Badge>
+                  )}
+                </>
+              )}
+
+              {isCompleted && role === "customer" && (
+                <>
+                  {!booking.review ? (
+                    <Button
+                      size="sm"
+                      onClick={() => setShowReviewForm(true)}
+                    >
+                      <Star className="h-3 w-3 mr-1" />
+                      Leave Review
+                    </Button>
+                  ) : (
+                    <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                      <MessageCircle className="h-3 w-3 mr-1" />
+                      Reviewed
+                    </Badge>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </CardHeader>
 
         <CardContent className="px-4 py-3">
+          {isCompleted && booking.review && (
+            <div className="mb-4">
+              <ReviewDisplay review={booking.review} compact />
+            </div>
+          )}
           {/* Pricing Section - Simple Display with Modal Option */}
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-2">
               <span className="text-lg font-semibold">₹{totalPrice.toFixed(2)}</span>
               {(booking.discount > 0 || booking.promo_code_discount > 0 || booking.service_discount > 0) && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="h-6 px-2 text-xs text-green-600 hover:text-green-700"
                   onClick={() => setShowPricing(true)}
                 >
@@ -183,6 +228,17 @@ export function BookingCard({ booking }: BookingCardProps) {
         </CardContent>
       </Card>
 
+      <Dialog open={showReviewForm} onOpenChange={setShowReviewForm}>
+        <DialogContent className="sm:max-w-md p-0">
+          <ReviewForm
+            serviceName={booking.service.name}
+            onSubmit={handleReviewSubmit}
+            onCancel={() => setShowReviewForm(false)}
+            isLoading={isSubmittingReview}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Price Breakdown Modal */}
       <Dialog open={showPricing} onOpenChange={setShowPricing}>
         <DialogContent className="sm:max-w-md">
@@ -192,34 +248,34 @@ export function BookingCard({ booking }: BookingCardProps) {
               Detailed pricing for {booking.service.name}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-3">
             <div className="flex justify-between items-center py-2 border-b">
               <span className="font-medium">Service Price</span>
               <span className="font-medium">₹{booking.service.price}</span>
             </div>
-            
+
             {booking.discount > 0 && (
               <div className="flex justify-between items-center py-2 text-red-600">
                 <span>Artist Discount</span>
                 <span>-₹{booking.discount}</span>
               </div>
             )}
-            
+
             {booking.promo_code_discount > 0 && (
               <div className="flex justify-between items-center py-2 text-red-600">
                 <span>Promo Code Discount</span>
                 <span>-₹{booking.promo_code_discount}</span>
               </div>
             )}
-            
+
             {booking.service_discount > 0 && (
               <div className="flex justify-between items-center py-2 text-red-600">
                 <span>Service Discount</span>
                 <span>-₹{booking.service_discount}</span>
               </div>
             )}
-            
+
             {booking.add_on.length > 0 && (
               <>
                 <div className="border-t pt-2">
@@ -233,7 +289,7 @@ export function BookingCard({ booking }: BookingCardProps) {
                 </div>
               </>
             )}
-            
+
             <div className="border-t pt-3">
               <div className="flex justify-between items-center py-2 text-lg font-semibold">
                 <span>Total Amount</span>
@@ -251,7 +307,7 @@ export function BookingCard({ booking }: BookingCardProps) {
               )}
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button onClick={() => setShowPricing(false)}>Close</Button>
           </DialogFooter>

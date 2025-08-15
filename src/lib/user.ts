@@ -26,6 +26,7 @@ import {
   KeyMatrix,
 } from "./type";
 import { endOfMonth, format, startOfMonth, subMonths } from "date-fns";
+import { isBookingCompleted } from '@/lib/utils';
 
 export const getAreas = async (): Promise<
   Result<{ id: number; name: string }[]>
@@ -466,7 +467,7 @@ export const getBookings = async (): Promise<Result<BookingInfo[]>> => {
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, total_amount, paid_amount, services(id, artist_profile(business_name), name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status, discount, promo_code_discount, service_discount"
+      "id, total_amount, paid_amount, services(id, artist_profile(business_name), name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status, discount, promo_code_discount, service_discount, review(created_at, rating, review)"
     )
     .eq("user_id", user.id)
     .not("status", "eq", "cancelled")
@@ -500,6 +501,11 @@ export const getBookings = async (): Promise<Result<BookingInfo[]>> => {
     discount: booking.discount,
     promo_code_discount: booking.promo_code_discount,
     service_discount: booking.service_discount,
+    review: booking.review && booking.review.length > 0 ? {
+      rating: booking.review[0].rating,
+      comment: booking.review[0].review,
+      created_at: booking.review[0].created_at,
+    } : null,
   }));
 
   return { data: info };
@@ -548,7 +554,7 @@ export const getArtistBookings = async (
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, total_amount, paid_amount, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status, discount, promo_code_discount, service_discount"
+      "id, total_amount, paid_amount, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status, discount, promo_code_discount, service_discount, review(created_at, rating, review)"
     )
     .eq("services.artist_id", artistId)
     .not("status", "eq", "cancelled")
@@ -558,6 +564,7 @@ export const getArtistBookings = async (
   if (DBError) {
     return { error: DBError.message };
   }
+
   if (!data) {
     return { error: "No bookings found" };
   }
@@ -581,6 +588,11 @@ export const getArtistBookings = async (
     discount: booking.discount,
     promo_code_discount: booking.promo_code_discount,
     service_discount: booking.service_discount,
+    review: booking.review && booking.review.length > 0 ? {
+      rating: booking.review[0].rating,
+      comment: booking.review[0].review,
+      created_at: booking.review[0].created_at,
+    } : null,
   }));
   return { data: info };
 };
@@ -606,19 +618,20 @@ export const getPastBookings = async (): Promise<Result<BookingInfo[]>> => {
   const { data, error: DBError } = await supabase
     .from("order")
     .select(
-      "id, total_amount, paid_amount, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status, discount, promo_code_discount, service_discount"
+      "id, total_amount, paid_amount, users(first_name, last_name, phone_no),services!inner(id, artist_id, name, price, duration), start_time, date, booked_add_on(id, add_on(id, name, price), count), client_address, status, discount, promo_code_discount, service_discount, review(created_at, rating, review)"
     )
     .eq("services.artist_id", user.id)
     .not("status", "eq", "cancelled")
     .not("status", "eq", "pending")
-    .lt("date", formattedDate);
+    .lte("date", formattedDate);
   if (DBError) {
     return { error: DBError.message };
   }
   if (!data) {
     return { error: "No bookings found" };
   }
-  const info = data.map((booking) => ({
+  const completedBookings = data.filter((booking) => isBookingCompleted(booking.date, booking.start_time, booking.services.duration));
+  const info = completedBookings.map((booking) => ({
     id: booking.id,
     paid_amount: booking.paid_amount,
     total_amount: booking.total_amount,
@@ -638,7 +651,12 @@ export const getPastBookings = async (): Promise<Result<BookingInfo[]>> => {
     discount: booking.discount,
     promo_code_discount: booking.promo_code_discount,
     service_discount: booking.service_discount,
-  }));
+    review: booking.review && booking.review.length > 0 ? {
+      rating: booking.review[0].rating,
+      comment: booking.review[0].review,
+      created_at: booking.review[0].created_at,
+    } : null,
+    }));
   return { data: info };
 };
 

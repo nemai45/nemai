@@ -54,6 +54,9 @@ input {
 
     --radius: 1rem;
 
+    --review-star: 43 96% 56%;
+    --review-star-muted: 210 40% 96.1%;
+
     --sidebar-background: 280 20% 98%;
     --sidebar-foreground: 280 10% 30%;
     --sidebar-primary: 282 62% 67%;

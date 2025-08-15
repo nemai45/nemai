@@ -21,13 +21,13 @@ interface ServicesListProps {
   setIsBooked: (isBooked: boolean) => void;
   bookedService: BookedService | null;
   setBookedService: (bookedService: BookedService | null) => void;
-  discount: number | null ;
+  discount: number | null;
 }
 
 const ServicesList = ({ services, isDrawerOpen, setIsDrawerOpen, isBooked, setIsBooked, bookedService, setBookedService, discount }: ServicesListProps) => {
   const { user, loading, error, role } = useUser();
   const router = useRouter();
-
+  console.log(services)
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
@@ -60,6 +60,11 @@ const ServicesList = ({ services, isDrawerOpen, setIsDrawerOpen, isBooked, setIs
                   <span className="line-through">₹{service.price}</span>
                   <span>₹{getDiscountedPrice(service.price, discount, service.discount)}</span>
                 </div>
+              ) : service.discount ? (
+                <div className="flex items-center gap-2">
+                  <span className="line-through">₹{service.price}</span>
+                  <span>₹{getDiscountedPrice(service.price, 0, service.discount)}</span>
+                </div>  
               ) : (
                 <span>₹{service.price}</span>
               )}

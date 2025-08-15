@@ -36,6 +36,10 @@ const config = {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
+        review: {
+					star: 'hsl(var(--review-star))',
+					'star-muted': 'hsl(var(--review-star-muted))'
+				},
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",

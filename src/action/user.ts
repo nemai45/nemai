@@ -14,6 +14,7 @@ import {
 import { getArtistDue } from "@/lib/user";
 import {
   getFinalAmount,
+  isBookingCompleted,
   shouldAllowCancel,
   timeToMinutes,
   uploadToCloudinary,
@@ -1834,3 +1835,73 @@ export const updateDiscountForArtist = async (
   revalidatePath("/admin/artists");
   return { error: null };
 };
+
+export const submitReview = async (bookingId: string, rating: number, comment: string | null) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!data) {
+    return { error: "User not found" };
+  }
+  const role = await getUserRole();
+  if (role !== "customer") {
+    return { error: "User is not a customer" };
+  }
+  const { data: bookingData, error: bookingError } = await supabase
+    .from("order")
+    .select("id, user_id, services!inner(artist_id, name, duration), date, start_time")
+    .eq("id", bookingId)
+    .single();
+  if (bookingError) {
+    return { error: bookingError.message };
+  }
+  if (bookingData.user_id !== data.user.id) {
+    return { error: "You are not authorized to submit a review for this booking" };
+  }
+  if (!isBookingCompleted(bookingData.date, bookingData.start_time, bookingData.services.duration)) {
+    return {
+      error: "You can only submit a review for a completed booking"
+    }
+  }
+  if(rating < 1 || rating > 5) {
+    return {
+      error: "Rating must be between 1 and 5"
+    }
+  }
+  if(comment && comment.length > 500) {
+    return {
+      error: "Comment must be less than 500 characters"
+    }
+  }
+
+  const { data: isReviewed, error: isReviewedError } = await supabase
+    .from("review")
+    .select("id")
+    .eq("order_id", bookingId)
+    .maybeSingle();
+    
+  if(isReviewedError) {
+    return { error: isReviewedError.message };
+  }
+
+  if(isReviewed) {
+    return {
+      error: "You have already submitted a review for this booking"
+    }
+  }
+
+  const { error: reviewError } = await supabase
+    .from("review")
+    .insert({
+      order_id: bookingId,
+      rating: rating,
+      review: comment,
+    });
+  if (reviewError) {
+    return { error: reviewError.message };
+  }
+  revalidatePath("/customer-dashboard/bookings");
+  return { error: null }
+}

@@ -314,6 +314,11 @@ const BookAppointment = ({ bookedService, services, profile }: BookAppointmentPr
                     <span className="line-through">₹{bookedService.service.price}</span>
                     <span>₹{ref.current.servicePrice}</span>
                   </div>
+                ) : bookedService.service.discount ? (
+                  <div className="text-sm font-medium flex items-center gap-2">
+                    <span className="line-through">₹{bookedService.service.price}</span>
+                    <span>₹{ref.current.servicePrice}</span>
+                  </div>
                 ) : (
                   <div className="text-sm font-medium">₹{bookedService.service.price}</div>
                 )

@@ -207,7 +207,11 @@ export const bookingInfoSchema = z.object({
   discount: z.number(),
   promo_code_discount: z.number(),
   service_discount: z.number(),
-
+  review: z.object({
+    rating: z.number(),
+    comment: z.string().nullable(),
+    created_at: z.string(),
+  }).nullable(),
 })
 
 export type BookingInfo = z.infer<typeof bookingInfoSchema>;
